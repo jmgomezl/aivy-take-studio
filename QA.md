@@ -17,6 +17,7 @@ accessed, no recordings were uploaded, and no Quorum business action was called.
 | Export boundaries | Missing chapters block final export; draft silence must be selected explicitly. Canceling export retains all takes and permits another export. |
 | Backup | Downloaded ZIP restored two original media takes into a separate project. The original project remained available. |
 | Reuse | A new local video + two-chapter JSON created a separate project and exported successfully. |
+| Public deployment | The same browser workflow passed on the HTTPS site, including microphone/camera takes, local model loading, persistence, backup and a playable MP4. JS and WASM content types were verified. |
 | Privacy | Runtime processing assets are self-hosted. Camera/microphone access is requested only by user controls. No upload or Quorum API endpoints are used. |
 
 Automated scripts:

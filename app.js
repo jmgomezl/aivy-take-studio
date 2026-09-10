@@ -644,6 +644,7 @@ function recordingMime(withCamera) {
 async function recordChapter() {
   if (locked()) return;
   stopPlayback();
+  $("script-scroll").scrollTop = 0;
   setMode("preparing");
   const token = ++countToken,
     chapterIndex = index,
