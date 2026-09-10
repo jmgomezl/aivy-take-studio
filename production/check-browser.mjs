@@ -4,7 +4,7 @@ const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
 const url =
-  process.env.TAKE_STUDIO_URL || "http://127.0.0.1:5182/studio/index.html";
+  process.env.TAKE_STUDIO_URL || "http://127.0.0.1:5183/";
 const work = "/tmp/take-studio-qa";
 await fs.mkdir(work, { recursive: true });
 const browser = await chromium.launch({

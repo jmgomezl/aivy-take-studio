@@ -36,3 +36,25 @@ Actual MacBook/Continuity Camera hardware, your room lighting, your voice and
 Safari still need a short check on your device. The app detects available codecs
 and cameras, but a synthetic-device test cannot establish those hardware results.
 Watch your complete human-narrated final export before submitting.
+
+## Independent repository check
+
+The extracted studio was checked from its own checkout at
+`http://127.0.0.1:5183/`, with no Quorum server running on that origin. All five
+unit checks and the complete short browser workflow passed: responsive layouts,
+synthetic microphone/camera takes, persistence, local segmentation model,
+backup, missing-chapter guard, a custom project and the 4-second video export.
+
+For the short browser check, create temporary fixtures with FFmpeg first:
+
+```sh
+mkdir -p /tmp/take-studio-qa
+ffmpeg -y -f lavfi -i testsrc2=size=1280x720:rate=30 -t 4 -c:v libx264 -pix_fmt yuv420p /tmp/take-studio-qa/visual.mp4
+ffmpeg -y -f lavfi -i sine=frequency=440:sample_rate=48000 -t 1.7 /tmp/take-studio-qa/voice.wav
+npm run dev
+# In another terminal, with Playwright + Chrome installed:
+npm run test:browser
+```
+
+The extended `test:export` check additionally expects `presenter.mp4` (a short
+camera fixture) and `recorded-backup.zip` (produced by the browser check).

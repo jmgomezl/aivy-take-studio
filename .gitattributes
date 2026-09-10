@@ -1,0 +1,2 @@
+# Unmodified browser dependencies are not application source.
+vendor/** linguist-vendored=true

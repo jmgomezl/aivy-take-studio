@@ -10,7 +10,7 @@ All runtime assets are self-hosted. Their exact hashes are in
 | Selfie segmenter | [float16 model, version 1](https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite) · [model documentation](https://developers.google.com/edge/mediapipe/solutions/vision/image_segmenter) | MediaPipe model distribution; [model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Selfie%20Segmentation.pdf) |
 | fflate | [0.8.3](https://www.npmjs.com/package/fflate/v/0.8.3), unmodified browser module | [MIT](vendor/FFLATE-LICENSE.txt) |
 | Manrope | [Google Fonts](https://github.com/google/fonts/tree/main/ofl/manrope), variable Latin WOFF2 | [OFL-1.1](vendor/MANROPE-OFL.txt) |
-| JetBrains Mono | Parent demo kit's mono font | [OFL-1.1](../assets/JetBrainsMono-OFL.txt) |
+| JetBrains Mono | Bundled JetBrains Mono font | [OFL-1.1](assets/JetBrainsMono-OFL.txt) |
 
 Design and implementation are original application code. Browser techniques were
 checked against [Mediabunny's guide](https://mediabunny.dev/guide/quick-start),

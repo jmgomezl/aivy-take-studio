@@ -797,7 +797,7 @@ async function loadProject(p) {
   if (baseUrl) URL.revokeObjectURL(baseUrl);
   baseBlob =
     p.videoBlob ||
-    (await fetch("../aivy-quorum-visual-cut.mp4?v=20260910-mirror").then(
+    (await fetch("presets/quorum/visual.mp4?v=20260910-mirror").then(
       (r) => {
         if (!r.ok) throw Error("The visual video could not load.");
         return r.blob();
@@ -1448,7 +1448,7 @@ async function init() {
     );
   let all = await Store.projects();
   if (!all.length) {
-    const response = await fetch("../timeline.json?v=20260910-mirror");
+    const response = await fetch("presets/quorum/timeline.json?v=20260910-mirror");
     if (!response.ok) throw Error("The chapter script could not load.");
     const raw = await response.json();
     const p = {

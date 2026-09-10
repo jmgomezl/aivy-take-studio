@@ -1,0 +1,106 @@
+{
+  "title": "Aivy Quorum — ready before it happens",
+  "duration": 239,
+  "language": "en",
+  "status": "Visual edit; human narration required before submission",
+  "chapters": [
+    {
+      "start": 0,
+      "end": 16,
+      "title": "When a small loss is a big problem",
+      "direction": "Quiet and personal. Pause after “seconds.” The shop is a hypothetical example, not an eyewitness story.",
+      "script": "An earthquake lasts seconds. The cost stays with you. Think of a small shop in Colombia: a cracked window, lost stock. A loss below the deductible can still overwhelm a family's savings."
+    },
+    {
+      "start": 16,
+      "end": 27,
+      "title": "A promise made before the earthquake",
+      "direction": "Sound curious and personal. Stress ‘before’.",
+      "script": "I built Aivy Quorum for parametric cover: agree the trigger and payout in advance. Verify the earthquake, not every broken window."
+    },
+    {
+      "start": 27,
+      "end": 44,
+      "title": "Choose a place",
+      "direction": "Conversational, as if showing a friend. Pause while the chart moves.",
+      "script": "Let's try Medellín. Pick a place and a budget. Drag through history to compare premiums for the same eight-hundred-dollar payout. This is a model. Payment depends on the agreed earthquake conditions."
+    },
+    {
+      "start": 44,
+      "end": 67,
+      "title": "Create real testnet cover",
+      "direction": "Let the confirmation breathe. Point with your voice to the NFT, then to the evidence.",
+      "script": "Here, I pay with funded test tokens. No wallet extension. This creates a real cover NFT, publishes the terms, and schedules the payout on Hedera. Here's the receipt. The tokens have no cash value, but these transactions really happened."
+    },
+    {
+      "start": 67,
+      "end": 87,
+      "title": "The agent pays for evidence",
+      "direction": "Make the difference between paying for data and approving a claim very clear.",
+      "script": "The agent pays three oracle services through Blocky402 using x402. Each checks the recorded conditions. Here are the receipts. No matching earthquake was found, so the payout stays locked. Buying data is not buying approval."
+    },
+    {
+      "start": 87,
+      "end": 111,
+      "title": "Why Hedera",
+      "direction": "Slow down at ‘two of three’. The displayed mainnet experiment is a separate recording.",
+      "script": "This is why Hedera matters. The agent signs the exact transfer in advance. Two of three oracle keys must also sign. Then Hedera executes it, without a separate executor transaction. This recorded mainnet experiment moved four HBAR. Controlled signatures, not a real earthquake claim."
+    },
+    {
+      "start": 111,
+      "end": 121,
+      "title": "Authority is deliberately limited",
+      "direction": "Confident and factual. Do not suggest that separate keys mean independent operators.",
+      "script": "The workflow has spending limits and saved transaction IDs. Even all three oracle keys cannot spend without the agent."
+    },
+    {
+      "start": 121,
+      "end": 153,
+      "title": "Why Axelar and Uniswap",
+      "direction": "Three distinct roles. A brief pause between Hedera, Axelar and Uniswap.",
+      "script": "These are demo-account tokens, separate from the locked cover reserve. Our Hedera Agent Kit Axelar plugin builds the bridge to Sepolia. Uniswap's Trading API prepares the swap. Review, confirm, inspect the receipts. A Hedera-native app reaches EVM liquidity without custom Solidity. Test tokens and gas are supplied, so judges can try it without a wallet extension."
+    },
+    {
+      "start": 153,
+      "end": 165,
+      "title": "Two pools, two purposes",
+      "direction": "Keep the distinction simple. ARPS is not a Uniswap position.",
+      "script": "Uniswap has a real position NFT, fee collection, and withdrawal. That's trading liquidity. Earthquake-cover deposits go into a separate, shared Hedera pool."
+    },
+    {
+      "start": 165,
+      "end": 177,
+      "title": "An honest business model",
+      "direction": "Explain today's limits clearly; commercial revenue is a proposal.",
+      "script": "Twenty-five test tokens buy twenty-five ARPS. ARPS earnings and exits aren't enabled. Brokers earn commissions. Future revenue could come from service fees for insurance partners."
+    },
+    {
+      "start": 177,
+      "end": 201,
+      "title": "A little less to remember",
+      "direction": "Smile slightly: this is the everyday benefit. Let the typed question breathe. One policy is issued; later dates are planned attempts within three saved periods.",
+      "script": "Here's the part I'd want for myself: less to remember. On Aivy Labs, I set a monthly budget for Medellín. Ten test tokens, at least eight hundred in conditional cover. My first policy is issued. I can ask, 'Am I covered?' And pause future purchases anytime."
+    },
+    {
+      "start": 201,
+      "end": 215,
+      "title": "Ask, then verify",
+      "direction": "The same policy appears on both sites. Stress “reads” and “cannot.” The final graphic is an excerpt of an actual Mirror response.",
+      "script": "Quorum answers that question too. It reads Hedera through Mirror Node and links the evidence. The AI explains; it cannot sign, spend, or change my policy."
+    },
+    {
+      "start": 215,
+      "end": 231,
+      "title": "What I reused, what I added",
+      "direction": "Be direct about reuse. The Mirror Node skill is pre-event development guidance from your open PR #16, not a new runtime dependency.",
+      "script": "My earlier Aivy app, Uniswap and Axelar plugins, and Mirror Node skill are reused. New here: guarded cover, paid verification, native settlement, cross-chain access, and the bounded monthly agent with its companion."
+    },
+    {
+      "start": 231,
+      "end": 239,
+      "title": "Ready before it happens",
+      "direction": "Warm finish. Pause before the final sentence.",
+      "script": "The goal is simple: less uncertainty when people need help. A promise you can actually verify."
+    }
+  ]
+}

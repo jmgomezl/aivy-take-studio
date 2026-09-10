@@ -1,7 +1,8 @@
 # Take Studio
 
-**Your story, one good take at a time.** A separate creator tool, preloaded with
-the 14-chapter Quorum film and reusable for later projects.
+**Your story, one good take at a time.** An independent creator tool: record
+a scripted video in chapters, keep your best takes and export a finished film.
+The 14-chapter Quorum film is included as a sample project.
 
 [Open Take Studio](https://quorum.aivylabs.xyz/demo-video/studio/)
 
@@ -96,17 +97,28 @@ Without JSON, the imported video becomes one chapter. Edit text from the prompte
 The visual video’s existing audio is muted; the output uses your selected takes.
 The original Quorum project and its recordings stay separate.
 
-Serve the parent kit locally with `node docs/demo-video/production/serve.mjs` and
-open `http://127.0.0.1:5180/studio/index.html`. HTTPS is required outside localhost.
+Run locally with **Node.js 22 or later**:
 
-The studio is plain HTML/CSS/ES modules. It has **no dependency on the Quorum
-agent, wallet or financial APIs**. Copy this folder and replace the two preset
-URLs (`../timeline.json` and the visual MP4) to host it elsewhere. The mono font
-is in the parent kit; all processing libraries, model and body font are bundled.
+```sh
+git clone https://github.com/jmgomezl/aivy-take-studio.git
+cd aivy-take-studio
+npm run dev
+```
 
-To reproduce vendor assets: run `npm ci --ignore-scripts && npm run vendor` in
-this folder. Versions are locked independently from Quorum's runtime.
-See [third-party notices](THIRD-PARTY.md) and [checks](QA.md).
+Open **http://127.0.0.1:5183/**. Runtime assets are already bundled; no install,
+API key, account or Quorum backend is needed. Run `npm test` for the core checks.
+
+The studio is plain HTML/CSS/ES modules and deploys as a static site. It has
+**its own repository, dependencies and release directory**, separate from
+Quorum's application and financial services. [Deployment guide](deploy/README.md).
+The existing public URL is retained to preserve browser-saved recordings.
+
+All default assets live in [`presets/quorum/`](presets/quorum/README.md) and
+`assets/`; custom projects use your imported video and script. The default
+project and IndexedDB identifiers remain compatible with the original studio.
+
+To reproduce processing dependencies, run `npm ci --ignore-scripts && npm run
+vendor`. See [third-party notices](THIRD-PARTY.md) and [checks](QA.md).
 
 **Submission boundary:** this is a founder's recording utility. It does not
 extend Quorum's insurance functionality or prove a new blockchain integration.
