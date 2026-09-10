@@ -1440,6 +1440,7 @@ navigator.mediaDevices?.addEventListener?.("devicechange", () =>
   run(refreshDevices),
 );
 async function init() {
+  setMode("loading");
   if (!window.MediaRecorder)
     throw Error(
       "Recording needs a current browser. Open this studio in Chrome or Edge.",
