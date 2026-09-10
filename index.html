@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Take Studio · Aivy</title>
+    <link rel="stylesheet" href="style.css?v=1" />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="../"
+        ><span class="brand-mark" aria-hidden="true">▥</span
+        ><strong>take<span>studio</span></strong
+        ><small>by Aivy</small></a
+      >
+      <div class="project-switch">
+        <label class="sr" for="project">Project</label
+        ><select id="project">
+          <option>Loading your studio…</option>
+        </select>
+      </div>
+      <div class="header-actions">
+        <span class="local-dot">On your device</span
+        ><button id="new-project" class="quiet">New project</button
+        ><button id="backup" class="quiet">Backup ↓</button
+        ><button
+          id="settings-open"
+          class="icon"
+          aria-label="Open studio settings"
+        >
+          ⚙
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <span class="eyebrow"
+            >A little less pressure. A little more you.</span
+          >
+          <h1>One good take at a time.</h1>
+        </div>
+        <div class="completion">
+          <span id="complete-count">0 <small>/ 14</small></span
+          ><span>chapters ready</span>
+          <div class="completion-track"><i id="complete-bar"></i></div>
+        </div>
+      </div>
+      <div id="notice" class="notice" role="status" aria-live="polite">
+        Loading your video and script…
+      </div>
+      <div class="workbench">
+        <section class="stage-panel" aria-label="Video and recording controls">
+          <div class="clockbar">
+            <div>
+              <span class="eyebrow" id="mode-label">Ready when you are</span
+              ><strong id="elapsed">00:00<span>.0</span></strong>
+            </div>
+            <div class="clock-small">
+              <span>Chapter left</span><strong id="remaining">00:16</strong>
+            </div>
+            <div class="clock-small">
+              <span>In the film</span
+              ><strong id="film-time">00:00 <small>/ 03:59</small></strong>
+            </div>
+          </div>
+          <div class="stage">
+            <video
+              id="base-video"
+              muted
+              playsinline
+              preload="auto"
+              class="media-source"
+            ></video
+            ><canvas
+              id="composition"
+              width="1280"
+              height="720"
+              aria-label="Video preview with optional presenter overlay"
+            ></canvas>
+            <div id="countdown" hidden>
+              <strong>3</strong><span>Take a breath.</span>
+            </div>
+            <span class="stage-badge" id="stage-badge"
+              >YOUR VISUAL EDIT · 1×</span
+            >
+            <div class="camera-placeholder" id="camera-placeholder" hidden>
+              Camera preview
+            </div>
+          </div>
+          <div class="transport">
+            <button id="play-chapter" class="icon" aria-label="Play chapter">
+              ▶</button
+            ><label class="sr" for="scrub">Chapter playback position</label
+            ><input
+              type="range"
+              id="scrub"
+              min="0"
+              max="16"
+              step=".05"
+              value="0"
+            /><span class="mono" id="chapter-range">00:00 — 00:16</span>
+          </div>
+          <div class="recordbar">
+            <button id="record" class="record-button">
+              <i></i><span>Record chapter</span></button
+            ><button id="stop" class="stop-button" disabled>■ Stop</button>
+            <div class="input-meter">
+              <span id="input-label">Microphone off</span>
+              <div class="meter"><i id="meter-fill"></i></div>
+            </div>
+            <button id="devices" class="quiet">Set up mic & camera ↗</button>
+          </div>
+        </section>
+        <section class="prompter" aria-label="Chapter script">
+          <div class="prompter-top">
+            <span class="eyebrow" id="chapter-number">01 / 14</span>
+            <div>
+              <button
+                id="script-smaller"
+                class="icon"
+                aria-label="Smaller script text"
+              >
+                A−</button
+              ><button
+                id="script-larger"
+                class="icon"
+                aria-label="Larger script text"
+              >
+                A+</button
+              ><button id="edit-script" class="quiet">Edit</button>
+            </div>
+          </div>
+          <h2 id="chapter-title">Your first chapter</h2>
+          <div class="script-scroll" id="script-scroll">
+            <p id="script"></p>
+          </div>
+          <p class="direction" id="direction"></p>
+          <div class="prompter-footer">
+            <span id="word-count"></span
+            ><label class="toggle-inline"
+              ><input type="checkbox" id="auto-scroll" checked />
+              Auto-scroll</label
+            >
+          </div>
+        </section>
+      </div>
+      <section class="chapter-section" aria-label="Chapter selection">
+        <div class="section-label">
+          <span class="eyebrow">Your story, piece by piece</span
+          ><span
+            ><button id="previous" class="quiet">← Previous</button
+            ><button id="next" class="quiet">Next →</button></span
+          >
+        </div>
+        <nav id="chapters" class="chapter-strip"></nav>
+      </section>
+      <section class="take-room" aria-label="Recorded takes">
+        <div class="take-heading">
+          <div>
+            <span class="eyebrow">Keep the one that feels like you</span>
+            <h2>Your takes <span id="take-count">0</span></h2>
+          </div>
+          <label class="import-take quiet"
+            >Import audio / video ↗<input
+              id="import-take"
+              type="file"
+              accept="audio/*,video/*"
+              hidden
+          /></label>
+        </div>
+        <div id="empty-takes" class="empty-takes">
+          <span class="wave-icon" aria-hidden="true">▁ ▃ ▅ ▂ ▆ ▃ ▁</span>
+          <p>
+            Your first take goes here.<br /><span
+              >Record just this chapter. Try again whenever you like.</span
+            >
+          </p>
+        </div>
+        <div id="take-editor" hidden>
+          <div class="take-tools">
+            <label>Selected take<select id="take-select"></select></label
+            ><button id="listen-take" class="quiet">▶ Listen & watch</button
+            ><button id="download-take" class="quiet">Original ↓</button
+            ><button id="delete-take" class="quiet danger-text">
+              Delete take
+            </button>
+          </div>
+          <canvas
+            id="waveform"
+            width="1200"
+            height="92"
+            aria-label="Audio waveform of selected take"
+          ></canvas>
+          <div class="trim-controls">
+            <label
+              >Trim start <span>seconds</span
+              ><input
+                id="trim-in"
+                type="number"
+                min="0"
+                step=".05"
+                value="0" /></label
+            ><label
+              >Trim end <span>seconds</span
+              ><input id="trim-out" type="number" min=".1" step=".05" /></label
+            ><label
+              >Start in chapter <span>seconds</span
+              ><input
+                id="take-offset"
+                type="number"
+                min="0"
+                step=".05"
+                value="0" /></label
+            ><label class="toggle-inline"
+              ><input id="take-camera" type="checkbox" /> Show camera in this
+              chapter</label
+            ><span id="take-fit"></span>
+          </div>
+        </div>
+      </section>
+      <div class="finish-bar">
+        <div>
+          <strong id="finish-title">A complete story, in your own voice.</strong
+          ><span>Gentle audio fades · balanced levels · original timing</span>
+        </div>
+        <button id="preview-all" class="secondary">Build a preview ↗</button
+        ><button id="export-open" class="primary">Finish & export →</button>
+      </div>
+      <footer>
+        <span
+          >Saved in this browser. Download a backup before switching devices or
+          clearing browser data.</span
+        ><button id="help-open" class="quiet">How it works ↗</button>
+      </footer>
+    </main>
+    <video id="camera-video" class="media-source" muted playsinline></video
+    ><video id="take-video" class="media-source" muted playsinline></video>
+    <dialog id="settings-dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">Make yourself comfortable</span>
+          <h2>Studio setup</h2>
+        </div>
+        <button class="icon close-dialog" aria-label="Close settings">×</button>
+      </div>
+      <div class="settings-grid">
+        <section>
+          <h3>Your devices</h3>
+          <label
+            >Microphone<select id="mic-select">
+              <option value="">Default microphone</option>
+            </select></label
+          ><label class="toggle-inline"
+            ><input id="camera-enabled" type="checkbox" /> Record me with the
+            camera</label
+          ><label
+            >Camera<select id="camera-select">
+              <option value="">Default camera</option>
+            </select></label
+          >
+          <div class="button-row">
+            <button id="enable-devices" class="primary">Enable preview</button
+            ><button id="disable-devices" class="quiet">
+              Turn devices off
+            </button>
+          </div>
+          <p id="device-status" class="muted">
+            Your browser will ask permission. Nothing is uploaded.
+          </p>
+          <a
+            href="https://support.apple.com/en-us/102546"
+            target="_blank"
+            rel="noreferrer"
+            >Use an iPhone as your camera ↗</a
+          >
+          <p class="muted">
+            Enable Continuity Camera on your iPhone. Keep it nearby, locked, on
+            the same Apple Account. Then refresh the devices below.
+          </p>
+          <button id="refresh-devices" class="quiet">Refresh devices ↻</button>
+        </section>
+        <section>
+          <h3>Your place in the picture</h3>
+          <label
+            >Background<select id="background">
+              <option value="remove">Remove background</option>
+              <option value="card">Keep in a rounded frame</option>
+              <option value="none">Camera hidden</option>
+            </select></label
+          ><label
+            >Corner<select id="position">
+              <option value="left">Lower left</option>
+              <option value="right">Lower right</option>
+            </select></label
+          ><label
+            >Size<input
+              type="range"
+              id="overlay-size"
+              min=".15"
+              max=".4"
+              step=".01"
+              value=".20" /></label
+          ><label class="toggle-inline"
+            ><input id="mirror-camera" type="checkbox" checked /> Mirror my
+            camera</label
+          >
+          <p id="mask-status" class="muted">
+            Background removal runs on this device. Good front lighting helps
+            hair and edges.
+          </p>
+          <p class="muted">
+            Your original camera take is kept locally, so you can change this
+            effect later.
+          </p>
+        </section>
+      </div>
+      <div class="settings-bottom">
+        <label class="toggle-inline"
+          ><input id="polish" type="checkbox" checked /> Balance voice levels &
+          soften audio cuts</label
+        ><label class="toggle-inline"
+          ><input id="auto-stop" type="checkbox" checked /> Stop at the chapter
+          deadline</label
+        ><button class="primary close-dialog">Done →</button>
+      </div>
+    </dialog>
+    <dialog id="export-dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">Bring your takes together</span>
+          <h2 id="export-title">Your final cut</h2>
+        </div>
+        <button
+          id="export-close"
+          class="icon close-dialog"
+          aria-label="Close export"
+        >
+          ×
+        </button>
+      </div>
+      <p id="export-summary"></p>
+      <div class="export-options">
+        <label
+          >Resolution<select id="resolution">
+            <option value="1080">1080p · final video</option>
+            <option value="720">720p · quick preview</option>
+          </select></label
+        ><label class="toggle-inline"
+          ><input id="allow-gaps" type="checkbox" /> Leave unrecorded chapters
+          silent</label
+        >
+      </div>
+      <div class="button-row">
+        <button id="render" class="primary">Create video →</button
+        ><button id="audio-export" class="secondary">
+          Combined voice WAV ↓</button
+        ><button id="cancel-render" class="quiet" hidden>Cancel export</button>
+      </div>
+      <div id="export-progress" hidden>
+        <progress max="1" value="0"></progress
+        ><span id="export-status" role="status">Preparing your takes…</span>
+      </div>
+      <video id="result-video" controls playsinline hidden></video>
+      <div id="result-downloads" class="button-row"></div>
+      <p class="muted">
+        Keep this tab open during export. Video, voice and background removal
+        are processed locally. No speech is generated or sped up.
+      </p>
+    </dialog>
+    <dialog id="project-dialog">
+      <div class="dialog-head">
+        <h2>A fresh story</h2>
+        <button class="icon close-dialog" aria-label="Close new project">
+          ×
+        </button>
+      </div>
+      <label
+        >Project name<input
+          id="new-name"
+          type="text"
+          placeholder="My next hackathon demo"
+          maxlength="180" /></label
+      ><label
+        >Your visual video<input
+          id="new-video"
+          type="file"
+          accept="video/*" /></label
+      ><label
+        >Chapter script <span class="muted">optional JSON</span
+        ><input id="new-timeline" type="file" accept=".json,application/json"
+      /></label>
+      <p class="muted">
+        Without a chapter script, start with one chapter. The video’s original
+        sound is replaced by your takes. Your existing projects stay saved.
+      </p>
+      <div class="button-row">
+        <button id="create-project" class="primary">Create project →</button
+        ><button id="script-template" class="quiet">
+          Example chapter file ↓
+        </button>
+      </div>
+      <hr />
+      <label class="import-take secondary"
+        >Restore a studio backup<input
+          id="restore"
+          type="file"
+          accept=".zip,application/zip"
+          hidden
+      /></label>
+    </dialog>
+    <dialog id="script-dialog">
+      <div class="dialog-head">
+        <h2>Words that sound like you</h2>
+        <button class="icon close-dialog" aria-label="Close script editor">
+          ×
+        </button>
+      </div>
+      <label
+        >Chapter title<input
+          id="edit-title"
+          type="text"
+          maxlength="180" /></label
+      ><label
+        >Your script<textarea
+          id="edit-words"
+          rows="10"
+          maxlength="20000"
+        ></textarea></label
+      ><label
+        >Direction to yourself<input
+          id="edit-direction"
+          type="text"
+          maxlength="1000" /></label
+      ><button id="save-script" class="primary">Save script →</button>
+      <p class="muted">
+        The chapter timing stays fixed so your voice follows the visual edit.
+      </p>
+    </dialog>
+    <dialog id="help-dialog">
+      <div class="dialog-head">
+        <h2>A small recording ritual.</h2>
+        <button class="icon close-dialog" aria-label="Close help">×</button>
+      </div>
+      <ol class="help-steps">
+        <li>
+          <strong>Settle in.</strong> Enable your mic, and camera if you like.
+          Use headphones when listening to takes.
+        </li>
+        <li>
+          <strong>One chapter at a time.</strong> A three-second countdown gives
+          you a breath. The clock shows how much time is left. Re-record freely;
+          every take stays available.
+        </li>
+        <li>
+          <strong>Choose & trim.</strong> Choose a take for each chapter. Trim
+          pauses at the edges, or add a short lead-in. Check your camera does
+          not hide important evidence.
+        </li>
+        <li>
+          <strong>Bring it together.</strong> Build a preview, then export the
+          full video with your voice and optional presenter overlay. Levels and
+          tiny fades smooth audio cuts; mismatched words need a retake.
+        </li>
+        <li>
+          <strong>Keep a copy.</strong> Download the final video and a project
+          backup. Browser storage can be cleared or evicted.
+        </li>
+      </ol>
+      <p class="muted">
+        Use a current Chrome or Edge browser on your Mac for the best recording
+        and export support. Camera availability comes from macOS; the studio
+        cannot enable an unavailable iPhone remotely.
+      </p>
+    </dialog>
+    <script type="module" src="app.js?v=1"></script>
+  </body>
+</html>

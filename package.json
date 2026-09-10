@@ -1,0 +1,9 @@
+{
+  "name": "aivy-take-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, chapter-based human narration and presenter video studio",
+  "scripts": { "vendor": "node production/vendor.mjs", "test": "node --test production/core.test.mjs" },
+  "dependencies": { "mediabunny": "1.56.1", "@mediapipe/tasks-vision": "1.0.1", "fflate": "0.8.3" }
+}

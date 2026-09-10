@@ -1,0 +1,53 @@
+{
+  "versions": {
+    "mediabunny": "1.56.1",
+    "@mediapipe/tasks-vision": "1.0.1",
+    "fflate": "0.8.3"
+  },
+  "files": {
+    "FFLATE-LICENSE.txt": {
+      "bytes": 1069,
+      "sha256": "0a1df3a083d0c010560aa342e87959c8c1070e6fd54545741f083f22d0c8b551"
+    },
+    "MANROPE-OFL.txt": {
+      "bytes": 4384,
+      "sha256": "e01b637272e0cbdfb240184dd98ea5cc671556d9894dae2668d92ab2c906787c"
+    },
+    "MEDIABUNNY-LICENSE.txt": {
+      "bytes": 16726,
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    },
+    "MEDIAPIPE-LICENSE.txt": {
+      "bytes": 12331,
+      "sha256": "8707eef0533987efc5b155d64761eeb6e20793f50b9bd1a68dad1cf4719d0ed8"
+    },
+    "fflate.js": {
+      "bytes": 90922,
+      "sha256": "b7ca4450b19559a1d50eb381adcee94b82449674be4cd17789d9beba7e6122a1"
+    },
+    "manrope.woff2": {
+      "bytes": 24576,
+      "sha256": "e310b55a7fd9677f5e3555e6c6c4d064fa1f1d24393f0ddbe217cea12a8c432f"
+    },
+    "mediabunny.js": {
+      "bytes": 1454102,
+      "sha256": "9c4d53dc4b65759a0e9cd2707467f8d771155923c5d287443ae2885da67297a2"
+    },
+    "selfie_segmenter.tflite": {
+      "bytes": 249537,
+      "sha256": "191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b"
+    },
+    "vision.js": {
+      "bytes": 155439,
+      "sha256": "d885630c297c0b20b1fe86096cb06291c4c8080876f27852e724f24ac603713f"
+    },
+    "wasm/vision_wasm_module_internal.js": {
+      "bytes": 323415,
+      "sha256": "da8934057f147b622e82cfb4c0dbd85461c598e268588b5a8ba9ca963a8ff82d"
+    },
+    "wasm/vision_wasm_module_internal.wasm": {
+      "bytes": 11756972,
+      "sha256": "2dabd8e23c60984628beb7bb338764c81a08e6837145273f59578684b5d53c1b"
+    }
+  }
+}
