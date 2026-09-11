@@ -57,8 +57,8 @@
       "start": 121,
       "end": 153,
       "title": "Why Axelar and Uniswap",
-      "direction": "Three distinct roles. A brief pause between Hedera, Axelar and Uniswap.",
-      "script": "These are demo-account tokens, separate from the locked cover reserve. Our Hedera Agent Kit Axelar plugin builds the bridge to Sepolia. Uniswap's Trading API prepares the swap. Review, confirm, inspect the receipts. A Hedera-native app reaches EVM liquidity without custom Solidity. Test tokens and gas are supplied, so judges can try it without a wallet extension."
+      "direction": "Emphasize 'my npm-published plugin' as reusable developer tooling. Quorum's execution adapters are separate new work. Let the real receipts speak for themselves.",
+      "script": "My npm-published Uniswap plugin lets Hedera Agent Kit developers access EVM liquidity. Here, Quorum adds guarded execution: my Axelar plugin builds the bridge, and Uniswap's Trading API prepares the Sepolia swap. These demo-account tokens are separate from the locked cover reserve. Review, confirm, inspect the receipts. Funded test wallets make it easy to try, without a wallet extension or custom swap contract."
     },
     {
       "start": 153,
@@ -92,8 +92,8 @@
       "start": 215,
       "end": 231,
       "title": "What I reused, what I added",
-      "direction": "Be direct about reuse. The Mirror Node skill is pre-event development guidance from your open PR #16, not a new runtime dependency.",
-      "script": "My earlier Aivy app, Uniswap and Axelar plugins, and Mirror Node skill are reused. New here: guarded cover, paid verification, native settlement, cross-chain access, and the bounded monthly agent with its companion."
+      "direction": "Be clear about the boundary: the published npm plugins and Mirror Node skill predate the event. The quote-only Uniswap extension and reusable settlement plugin are new event work.",
+      "script": "Earlier Aivy, my published Uniswap and Axelar plugins, and Mirror Node skill are reused. New here: quote-only Uniswap tooling, a reusable settlement plugin, guarded cover, paid oracles, and monthly agents."
     },
     {
       "start": 231,
@@ -102,5 +102,6 @@
       "direction": "Warm finish. Pause before the final sentence.",
       "script": "The goal is simple: less uncertainty when people need help. A promise you can actually verify."
     }
-  ]
+  ],
+  "revision": "20260911-contributions"
 }

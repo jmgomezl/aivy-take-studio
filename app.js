@@ -3,9 +3,10 @@ import {
   clamp,
   takePlan,
   validateTimeline,
+  refreshPreset,
   safeName,
   overlayRect,
-} from "./core.js";
+} from "./core.js?v=20260911-contributions";
 import * as Store from "./storage.js";
 import {
   inspectMedia,
@@ -797,7 +798,7 @@ async function loadProject(p) {
   if (baseUrl) URL.revokeObjectURL(baseUrl);
   baseBlob =
     p.videoBlob ||
-    (await fetch("presets/quorum/visual.mp4?v=20260910-mirror").then(
+    (await fetch("presets/quorum/visual.mp4?v=20260911-contributions").then(
       (r) => {
         if (!r.ok) throw Error("The visual video could not load.");
         return r.blob();
@@ -1447,13 +1448,15 @@ async function init() {
       "Recording needs a current browser. Open this studio in Chrome or Edge.",
     );
   let all = await Store.projects();
+  let refreshNotice = "";
   if (!all.length) {
-    const response = await fetch("presets/quorum/timeline.json?v=20260910-mirror");
+    const response = await fetch("presets/quorum/timeline.json?v=20260911-contributions");
     if (!response.ok) throw Error("The chapter script could not load.");
     const raw = await response.json();
     const p = {
       ...validateTimeline(raw, raw.duration),
       id: "quorum-september-2026",
+      presetRevision: raw.revision,
       updatedAt: Date.now(),
       settings: { ...defaults },
       selected: {},
@@ -1461,9 +1464,27 @@ async function init() {
     await Store.saveProject(p);
     all = [p];
   }
+  if (all.some(p => p.id === "quorum-september-2026" && !p.videoBlob && p.presetRevision !== "20260911-contributions")) {
+    try {
+      const response = await fetch("presets/quorum/update.json?v=20260911-contributions");
+      if (!response.ok) throw Error("Sample update unavailable");
+      const update = await response.json();
+      for (let i = 0; i < all.length; i++) {
+        const refreshed = refreshPreset(all[i], update);
+        if (refreshed !== all[i]) {
+          await Store.saveProject(refreshed);
+          all[i] = refreshed;
+          refreshNotice = "Quorum visuals updated. Review chapters 8 and 13 before recording; saved takes and your own script edits are kept.";
+        }
+      }
+    } catch {
+      refreshNotice = "Your saved project is available. The sample script update could not load; reload later to retry.";
+    }
+  }
   await loadProject(
     all.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0],
   );
+  if (refreshNotice && project.id === "quorum-september-2026") message(refreshNotice);
   await refreshProjectMenu();
   requestAnimationFrame(draw);
 }

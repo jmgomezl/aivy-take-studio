@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   validateTimeline,
+  refreshPreset,
   takePlan,
   voiceGain,
   edgeGain,
@@ -65,4 +66,47 @@ test("presenter remains inside the video at both corners and every allowed size"
             r.y + r.h <= (width * 9) / 16,
         );
       }
+});
+
+import { readFileSync } from "node:fs";
+const sampleUpdate = JSON.parse(readFileSync(new URL("../presets/quorum/update.json", import.meta.url)));
+const sampleTimeline = JSON.parse(readFileSync(new URL("../presets/quorum/timeline.json", import.meta.url)));
+function originalSample() {
+  const p = { ...validateTimeline(sampleTimeline, sampleTimeline.duration),
+    id: sampleUpdate.projectId, updatedAt: 123,
+    selected: { 7: "saved-take-8", 12: "saved-take-13" },
+    settings: { mic: "chosen-mic", camera: true, polish: false } };
+  for (const patch of sampleUpdate.patches) p.chapters[patch.index][patch.field] = patch.previous;
+  return p;
+}
+test("sample refresh preserves recording choices, custom fields, timings and project recency", () => {
+  const original = originalSample();
+  const before = structuredClone(original);
+  const result = refreshPreset(original, sampleUpdate);
+  assert.deepEqual(original, before);
+  assert.equal(result.selected, original.selected);
+  assert.equal(result.settings, original.settings);
+  assert.equal(result.updatedAt, original.updatedAt);
+  assert.equal(result.id, original.id);
+  assert.deepEqual(result.chapters.map(c => [c.start, c.end]), sampleUpdate.boundaries);
+  for (const patch of sampleUpdate.patches)
+    assert.equal(result.chapters[patch.index][patch.field], patch.value);
+  assert.equal(refreshPreset(result, sampleUpdate), result);
+});
+test("sample refresh never replaces a user's rewritten narration or delivery notes", () => {
+  const p = originalSample();
+  p.chapters[7].script = "My personal narration.";
+  p.chapters[12].direction = "Pause here.";
+  const result = refreshPreset(p, sampleUpdate);
+  assert.equal(result.chapters[7].script, "My personal narration.");
+  assert.equal(result.chapters[12].direction, "Pause here.");
+  assert.equal(result.chapters[12].script, sampleTimeline.chapters[12].script);
+});
+test("sample refresh leaves custom projects, uploaded video and changed chapter timing alone", () => {
+  for (const change of [p => p.id = "my-project", p => p.videoBlob = new Blob(["user video"]),
+    p => p.chapters[7].start++, p => p.chapters.pop(), p => p.duration++]) {
+    const p = originalSample();
+    change(p);
+    assert.equal(refreshPreset(p, sampleUpdate), p);
+  }
 });

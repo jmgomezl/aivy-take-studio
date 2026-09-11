@@ -108,3 +108,19 @@ export function safeName(s) {
       .slice(0, 80) || "my-demo"
   );
 }
+
+// Refresh only untouched sample text. Media, timing and recording choices belong to the user.
+export function refreshPreset(project, update) {
+  if (project.id !== update.projectId || project.videoBlob ||
+      project.presetRevision === update.revision || project.duration !== update.duration ||
+      project.chapters.length !== update.boundaries.length ||
+      !project.chapters.every((c, i) => c.start === update.boundaries[i][0] && c.end === update.boundaries[i][1]))
+    return project;
+  const chapters = project.chapters.map(c => ({ ...c }));
+  for (const patch of update.patches) {
+    if (!["script", "direction"].includes(patch.field)) continue;
+    const c = chapters[patch.index];
+    if (c && c[patch.field] === patch.previous) c[patch.field] = patch.value;
+  }
+  return { ...project, chapters, presetRevision: update.revision };
+}
