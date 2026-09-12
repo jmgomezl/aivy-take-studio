@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Juanma Gomez. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
+// See LICENSE and LICENSING.md; prior MIT grants are preserved.
 import * as M from "./vendor/mediabunny.js";
 import { clamp, edgeGain, overlayRect, takePlan, voiceGain } from "./core.js";
 export { M };

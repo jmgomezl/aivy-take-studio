@@ -1,5 +1,9 @@
 # Third-party sources
 
+The proprietary [Studio license](LICENSE) applies to the original application
+only. These components keep their own licenses and rights, including access to
+MPL-covered source. See [LICENSING.md](LICENSING.md) for the release boundary.
+
 All runtime assets are self-hosted. Their exact hashes are in
 [`vendor/manifest.json`](vendor/manifest.json). No recording is sent to these projects.
 

@@ -1,5 +1,9 @@
 # Independent static deployment
 
+For the copyright holder and separately authorized operators only. These steps
+do not grant self-hosting rights. See [LICENSE](../LICENSE) and
+[LICENSING.md](../LICENSING.md).
+
 Take Studio owns its source and releases. Quorum only links to it and routes its
 existing URL to this independent directory. No Quorum API, wallet, PM2 process,
 environment file or financial journal is part of a studio deployment.

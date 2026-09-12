@@ -6,6 +6,10 @@ The 14-chapter Quorum film is included as a sample project.
 
 [Open Take Studio](https://quorum.aivylabs.xyz/demo-video/studio/)
 
+**Proprietary software · v1.1.0.** Hosted use is permitted for your personal or
+commercial videos; software reuse and self-hosting require separate permission.
+Your recordings remain yours. [License and prior MIT release](LICENSING.md).
+
 ```text
 Choose a chapter → record voice / camera → choose & trim a take
                                              ↓
@@ -81,7 +85,7 @@ codec support is detected at runtime, and failures are shown instead of creating
 a pretend export. Safari and specific Continuity Camera hardware still need
 testing on your actual devices.
 
-## Reuse and development
+## Your own video projects
 
 **New project** accepts a local video and a JSON chapter script. Download the
 example in the dialog. Times must be consecutive and cover the entire video:
@@ -97,7 +101,11 @@ Without JSON, the imported video becomes one chapter. Edit text from the prompte
 The visual video’s existing audio is muted; the output uses your selected takes.
 The original Quorum project and its recordings stay separate.
 
-Run locally with **Node.js 22 or later**:
+## Authorized development
+
+The following instructions are for the copyright holder and developers with
+separate written permission. They do not grant software reuse or self-hosting
+rights. Run locally with **Node.js 22 or later**:
 
 ```sh
 git clone https://github.com/jmgomezl/aivy-take-studio.git

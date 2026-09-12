@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Juanma Gomez. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
+// See LICENSE and LICENSING.md; prior MIT grants are preserved.
 export const clamp = (n, low, high) => Math.max(low, Math.min(high, n));
 export function clock(seconds, decimal = false) {
   seconds = Math.max(0, seconds || 0);

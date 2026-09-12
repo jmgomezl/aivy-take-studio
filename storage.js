@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Juanma Gomez. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
+// See LICENSE and LICENSING.md; prior MIT grants are preserved.
 const dbPromise = new Promise((resolve, reject) => {
   const request = indexedDB.open("aivy-take-studio", 1);
   request.onupgradeneeded = () => {

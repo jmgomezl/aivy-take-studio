@@ -1,21 +1,74 @@
-MIT License
+Take Studio Proprietary License
 
-Copyright (c) 2026 Juanma Gomez
+Copyright (c) 2026 Juanma Gomez. All rights reserved.
+License version 1.0 | Effective 2026-09-11 | Application version 1.1.0 onward
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Scope
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This license applies to the original Take Studio application code, styles,
+documentation and other original materials distributed with this notice
+(the "Software"). It is a proprietary license, not an open-source license.
+Third-party components, separately licensed sample materials, and previously
+granted rights are excluded as described below.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Authorized hosted use
+
+The copyright holder grants you a non-exclusive, non-transferable permission
+to access and use a Take Studio instance operated by the copyright holder or
+an operator authorized by the copyright holder to create, edit and export your
+personal or commercial recordings. This permission includes copies necessarily
+downloaded or cached by your browser for that use. It does not authorize you
+to deploy, distribute or operate another instance of the Software.
+
+3. Reserved software rights
+
+Except for the permission above, a separate written agreement with the
+copyright holder, rights under a prior license, or rights provided by applicable
+law, no permission is granted to copy, modify, create derivative works of,
+distribute, sublicense, sell, rent, self-host or otherwise commercially exploit
+the Software. Preserve applicable copyright and license notices. Availability
+of source code does not grant an open-source license. Any rights granted by
+the terms of a source-hosting platform, including viewing and on-platform
+forking where applicable, are not restricted by this notice.
+
+4. Your recordings and outputs
+
+You retain your rights in the videos, audio, scripts and other materials you
+provide, and in your original contributions to exported recordings. This
+license does not claim ownership of those materials or restrict your ability
+to download, back up, share or monetize your recordings. Rights in third-party
+materials you include remain subject to their applicable terms.
+
+5. Third-party and sample materials
+
+Third-party libraries, models, fonts and separately licensed sample materials
+remain governed by their respective licenses and notices. See THIRD-PARTY.md,
+vendor/ and assets/ for notices, and presets/quorum/README.md for sample
+provenance. This license does not restrict rights granted by those licenses,
+including the rights to MPL-covered source code. No third-party copyright
+notice or license is replaced by this notice.
+
+6. Prior MIT releases
+
+Take Studio versions distributed under MIT through repository commit
+64479f89b4ca18b15b3cc46a44f28caf40eb609b retain their MIT terms.
+This change does not revoke, narrow or retroactively replace any permissions
+already granted for those copies or their covered contents. New original
+contributions distributed under this notice are not offered under MIT unless
+the copyright holder separately grants that permission. See LICENSING.md
+for the exact historical license and release boundary.
+
+7. Warranty and liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED
+"AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+THE COPYRIGHT HOLDER IS NOT LIABLE FOR CLAIMS, DAMAGES OR OTHER LIABILITY
+ARISING FROM THE SOFTWARE OR ITS USE. Nothing in this notice excludes rights
+or liabilities that cannot lawfully be excluded.
+
+8. Additional permission
+
+Commercial distribution, authorized self-hosting, development access or other
+software permissions require a separate written agreement with the copyright
+holder. Contact Juanma Gomez through https://github.com/jmgomezl.
