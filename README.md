@@ -6,7 +6,7 @@ The 14-chapter Quorum film is included as a sample project.
 
 [Open Take Studio](https://quorum.aivylabs.xyz/demo-video/studio/)
 
-**Proprietary software · v1.1.0.** Hosted use is permitted for your personal or
+**Proprietary software · v1.1.1.** Hosted use is permitted for your personal or
 commercial videos; software reuse and self-hosting require separate permission.
 Your recordings remain yours. [License and prior MIT release](LICENSING.md).
 
@@ -42,7 +42,20 @@ video. Download it, watch it once in full and submit it yourself.
 - Choose the MacBook camera or an iPhone that macOS exposes through
   [Continuity Camera](https://support.apple.com/en-us/102546). The website cannot
   activate a phone that the operating system has not made available. Use the
-  device refresh button after connecting it.
+  **Find devices ↻** button after connecting it. Discovery briefly requests
+  camera/microphone access, stops its temporary streams, then lists the inputs.
+  It does not record or upload anything. Select your iPhone by its device name,
+  enable **Record me with the camera**, then **Enable preview**.
+- A reconnected device is restored by its saved ID or unique device name. A
+  missing camera stays selected with a reconnect notice rather than silently
+  switching to the Mac camera. Device lists refresh when setup opens, the tab
+  becomes visible, or the browser reports a device change.
+- If the iPhone is absent, connect it by USB, tap **Trust**, then lock and mount
+  it nearby. Camera permission is separate from microphone permission. Check
+  the site's browser permissions and macOS **Privacy & Security → Camera**.
+  If Chrome still exposes no cameras, save your work and restart the browser.
+  A disconnected camera prevents a new camera take; a disconnection during
+  recording stops and retains the captured part.
 - **Remove background** runs Google's MediaPipe selfie segmentation locally in
   a worker. No camera frames go to an AI service. Front lighting and an uncluttered
   background improve edges; this is not a guarantee of perfect hair masking.

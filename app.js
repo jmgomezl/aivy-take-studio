@@ -10,6 +10,7 @@ import {
   safeName,
   overlayRect,
 } from "./core.js?v=20260911-contributions";
+import { resolveDevice, devicesReady, deviceError, discoverDevices } from "./devices.js?v=20260927-camera";
 import * as Store from "./storage.js";
 import {
   inspectMedia,
@@ -37,7 +38,9 @@ const defaults = {
   autoStop: true,
   camera: false,
   mic: "",
+  micLabel: "",
   cameraId: "",
+  cameraLabel: "",
   font: 24,
 };
 let project,
@@ -67,7 +70,9 @@ let project,
   ready = false;
 let devicesConfig = "",
   deviceGeneration = 0,
-  deviceSetupPromise = null;
+  deviceSetupPromise = null,
+  deviceDiscoveryPromise = null,
+  deviceListGeneration = 0;
 let liveForeground = null,
   segmentBusy = false,
   lastSegment = 0,
@@ -139,7 +144,8 @@ function setMode(value) {
     "recording",
     "playing",
   ].includes(value);
-  $("record").disabled = locked() || !ready;
+  $("record").disabled = locked() || !ready || Boolean(deviceDiscoveryPromise);
+  syncDeviceControls();
   $("mode-label").textContent =
     {
       recording: "● Recording your voice",
@@ -312,40 +318,79 @@ function settingsChanged() {
     autoStop: $("auto-stop").checked,
     mic: $("mic-select").value,
     cameraId: $("camera-select").value,
+    micLabel: $("mic-select").selectedOptions[0]?.dataset.label || "",
+    cameraLabel: $("camera-select").selectedOptions[0]?.dataset.label || "",
   });
   segmentError = false;
   liveForeground?.close();
   liveForeground = null;
   void persist().catch(() => {});
 }
+function syncDeviceControls() {
+  const busy = locked() || Boolean(deviceSetupPromise || deviceDiscoveryPromise);
+  for (const id of ["enable-devices", "refresh-devices", "camera-enabled", "mic-select", "camera-select"])
+    $(id).disabled = busy;
+  $("disable-devices").disabled = locked();
+}
 async function refreshDevices() {
-  if (!navigator.mediaDevices?.enumerateDevices) return;
+  if (!project || !navigator.mediaDevices?.enumerateDevices) return [];
+  const current = project, generation = ++deviceListGeneration;
   const list = await navigator.mediaDevices.enumerateDevices();
-  for (const [id, kind, saved] of [
-    ["mic-select", "audioinput", project.settings.mic],
-    ["camera-select", "videoinput", project.settings.cameraId],
+  if (project !== current || generation !== deviceListGeneration) return list;
+  let changed = false;
+  for (const [id, kind, key, labelKey] of [
+    ["mic-select", "audioinput", "mic", "micLabel"],
+    ["camera-select", "videoinput", "cameraId", "cameraLabel"],
   ]) {
-    const select = $(id);
+    const select = $(id), s = project.settings;
+    const choice = resolveDevice(list, kind, s[key], s[labelKey]);
     select.replaceChildren();
-    const def = document.createElement("option");
-    def.value = "";
-    def.textContent =
-      kind === "audioinput" ? "Default microphone" : "Default camera";
-    select.append(def);
-    list
-      .filter((d) => d.kind === kind)
-      .forEach((d, i) => {
-        const o = document.createElement("option");
-        o.value = d.deviceId;
-        o.textContent =
-          d.label ||
-          `${kind === "audioinput" ? "Microphone" : "Camera"} ${i + 1}`;
-        select.append(o);
-      });
-    select.value = [...select.options].some((o) => o.value === saved)
-      ? saved
-      : "";
+    select.append(new Option(kind === "audioinput" ? "Default microphone" : "Default camera", ""));
+    list.filter(d => d.kind === kind && d.deviceId).forEach((d, i) => {
+      const option = new Option(d.label || `${kind === "audioinput" ? "Microphone" : "Camera"} ${i + 1}`, d.deviceId);
+      option.dataset.label = d.label;
+      select.append(option);
+    });
+    if (choice.missing) {
+      const option = new Option(`${choice.label || "Saved device"} — reconnect or choose another`, choice.id);
+      option.dataset.label = choice.label;
+      select.append(option);
+    }
+    select.value = choice.id;
+    if (s[key] !== choice.id || (s[labelKey] || "") !== choice.label) {
+      s[key] = choice.id; s[labelKey] = choice.label; changed = true;
+    }
   }
+  if (changed) await persist();
+  return list;
+}
+function findDevices() {
+  if (locked() || deviceSetupPromise || deviceDiscoveryPromise) return;
+  const generation = deviceGeneration, current = project;
+  $("device-status").textContent = "Finding microphones and cameras… Allow access if asked. Nothing is recorded.";
+  deviceDiscoveryPromise = (async () => {
+    if (!navigator.mediaDevices?.getUserMedia) throw Error("Device discovery needs HTTPS and a browser with camera support.");
+    const result = await discoverDevices(navigator.mediaDevices, {
+      active: devices,
+      canceled: () => generation !== deviceGeneration || current !== project,
+    });
+    if (result.canceled) return;
+    const list = await refreshDevices();
+    if (generation !== deviceGeneration || current !== project) return;
+    const cameras = list.filter(d => d.kind === "videoinput" && d.deviceId).length;
+    const microphones = list.filter(d => d.kind === "audioinput" && d.deviceId).length;
+    const status = `${cameras} camera${cameras === 1 ? "" : "s"} · ${microphones} microphone${microphones === 1 ? "" : "s"}. Select your devices, then Enable preview.`;
+    const detail = result.errors.map(({kind, error}) => deviceError(error, kind === "video" ? "Camera" : "Microphone")).join(" ");
+    $("device-status").textContent = detail || status;
+    message(detail || status, Boolean(detail));
+  })().finally(() => {
+    deviceDiscoveryPromise = null;
+    syncDeviceControls();
+    $("record").disabled = locked() || !ready;
+  });
+  syncDeviceControls();
+  $("record").disabled = true;
+  return deviceDiscoveryPromise;
 }
 function stopDevices() {
   deviceGeneration++;
@@ -364,11 +409,17 @@ function stopDevices() {
 }
 function enableDevices() {
   if (deviceSetupPromise) return deviceSetupPromise;
-  $("enable-devices").disabled = true;
-  deviceSetupPromise = enableDevicesNow().finally(() => {
+  if (deviceDiscoveryPromise) throw Error("Wait for device discovery to finish, then enable preview.");
+  deviceSetupPromise = enableDevicesNow().catch(error => {
+    stopDevices();
+    const text = deviceError(error);
+    $("device-status").textContent = text;
+    throw Error(text);
+  }).finally(() => {
     deviceSetupPromise = null;
-    $("enable-devices").disabled = false;
+    syncDeviceControls();
   });
+  syncDeviceControls();
   return deviceSetupPromise;
 }
 const deviceConfig = () =>
@@ -384,9 +435,11 @@ async function enableDevicesNow() {
     );
   stopDevices();
   settingsChanged();
-  const s = project.settings,
-    generation = deviceGeneration,
-    config = deviceConfig();
+  $("device-status").textContent = "Connecting your selected devices…";
+  const generation = deviceGeneration;
+  await refreshDevices();
+  if (generation !== deviceGeneration) throw Error("Device setup canceled.");
+  const s = { ...project.settings }, config = deviceConfig();
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       ...(s.mic ? { deviceId: { exact: s.mic } } : {}),
@@ -399,7 +452,7 @@ async function enableDevicesNow() {
           ...(s.cameraId ? { deviceId: { exact: s.cameraId } } : {}),
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          frameRate: { ideal: 30, max: 30 },
+          frameRate: { ideal: 30 },
         }
       : false,
   });
@@ -420,12 +473,16 @@ async function enableDevicesNow() {
     camera.srcObject = stream;
     await camera.play();
   }
+  if (generation !== deviceGeneration || !devicesReady(stream, s.camera))
+    throw Error("A device disconnected during setup. Reconnect it and enable preview again.");
   for (const track of stream.getTracks())
     track.onended = () => {
-      if (mode === "recording")
+      devicesConfig = "";
+      if (["preparing", "countdown", "recording"].includes(mode))
         stopRecording(
           "A recording device disconnected. The captured part has been kept.",
         );
+      $("device-status").textContent = "A device disconnected. Reconnect it, then Find devices and Enable preview.";
       message(
         "A device disconnected. Reconnect it and enable preview again.",
         true,
@@ -433,9 +490,10 @@ async function enableDevicesNow() {
     };
   $("input-label").textContent =
     stream.getAudioTracks()[0]?.label || "Microphone ready";
-  $("device-status").textContent = s.camera
-    ? "Camera and microphone ready."
-    : "Microphone ready.";
+  $("device-status").textContent = [
+    s.camera ? `Camera: ${stream.getVideoTracks()[0]?.label || "ready"}` : "",
+    `Microphone: ${stream.getAudioTracks()[0]?.label || "ready"}`,
+  ].filter(Boolean).join(" · ");
   await refreshDevices();
   void Store.persistStorage();
   if (s.camera && s.background === "remove") {
@@ -657,7 +715,7 @@ async function recordChapter() {
     if (
       !devices ||
       devicesConfig !== deviceConfig() ||
-      !devices.getAudioTracks().some((t) => t.readyState === "live")
+      !devicesReady(devices, project.settings.camera)
     )
       await enableDevices();
     if (token !== countToken) return;
@@ -743,6 +801,8 @@ async function recordChapter() {
       }
     }
     $("countdown").hidden = true;
+    if (!devicesReady(devices, project.settings.camera))
+      throw Error("A recording device disconnected. Reconnect it and enable preview again.");
     recorder.start(1000);
     recordStarted = performance.now();
     setMode("recording");
@@ -771,6 +831,7 @@ async function recordChapter() {
 function stopRecording(note) {
   if (["preparing", "countdown"].includes(mode)) {
     countToken++;
+    stopDevices();
     $("countdown").hidden = true;
     setMode("idle");
     return;
@@ -1218,12 +1279,15 @@ $("scrub").oninput = () => {
   drawClocks(n);
 };
 for (const id of ["settings-open", "devices"])
-  $(id).onclick = () => openDialog("settings-dialog");
+  $(id).onclick = () => {
+    openDialog("settings-dialog");
+    run(refreshDevices);
+  };
 $("help-open").onclick = () => openDialog("help-dialog");
 $("new-project").onclick = () => openDialog("project-dialog");
 $("enable-devices").onclick = () => run(enableDevices);
 $("disable-devices").onclick = stopDevices;
-$("refresh-devices").onclick = () => run(refreshDevices);
+$("refresh-devices").onclick = () => run(findDevices);
 for (const id of [
   "camera-enabled",
   "background",
@@ -1439,10 +1503,10 @@ document.addEventListener("visibilitychange", () => {
         "The tab became hidden. Your partial take is saved; record again with the studio visible.",
       );
     if (mode === "playing") stopPlayback();
-  }
+  } else if (!locked()) run(refreshDevices);
 });
 navigator.mediaDevices?.addEventListener?.("devicechange", () =>
-  run(refreshDevices),
+  !locked() && run(refreshDevices),
 );
 async function init() {
   setMode("loading");

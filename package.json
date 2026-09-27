@@ -1,13 +1,13 @@
 {
   "name": "aivy-take-studio",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "Private, chapter-based human narration and presenter video studio",
   "scripts": {
     "dev": "node production/serve.mjs",
     "vendor": "node production/vendor.mjs",
-    "test": "node --test production/core.test.mjs",
+    "test": "node --test production/*.test.mjs",
     "test:browser": "node production/check-browser.mjs",
     "test:export": "node production/check-export.mjs",
     "build": "node production/build.mjs"

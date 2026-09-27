@@ -58,3 +58,20 @@ npm run test:browser
 
 The extended `test:export` check additionally expects `presenter.mp4` (a short
 camera fixture) and `recorded-backup.zip` (produced by the browser check).
+
+
+## iPhone reconnection · September 27, 2026
+
+- **17 unit checks passed**, including changing Continuity Camera IDs,
+  missing/ambiguous device names, dead video tracks with a live microphone,
+  separate permission failures, probe cleanup/cancellation and preserving an
+  active preview during discovery.
+- On the author's Mac, **Find devices** discovered **Androide Camera** (the
+  iPhone's name). Selecting it with **Shure MV51** produced live, unmuted audio
+  and video tracks and a **1280 × 720** playing preview in Chrome.
+- The live-hardware check used preview only: **no take was recorded or uploaded**.
+  Physical disconnect/reconnect recovery is covered by mocked device tests;
+  we did not unplug the user's active camera during this check.
+- Existing project IDs, IndexedDB schema, recordings, scripts and selected
+  takes are unchanged. This patch changes device discovery/setup only; export
+  was not rerun for this patch. Earlier export results above remain historical.

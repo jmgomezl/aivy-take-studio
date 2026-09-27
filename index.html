@@ -270,7 +270,7 @@
               Turn devices off
             </button>
           </div>
-          <p id="device-status" class="muted">
+          <p id="device-status" class="muted" role="status">
             Your browser will ask permission. Nothing is uploaded.
           </p>
           <a
@@ -281,9 +281,10 @@
           >
           <p class="muted">
             Enable Continuity Camera on your iPhone. Keep it nearby, locked, on
-            the same Apple Account. Then refresh the devices below.
+            the same Apple Account. If missing, connect by USB, tap Trust, then
+            lock and mount it. Find devices below and choose your iPhone’s name.
           </p>
-          <button id="refresh-devices" class="quiet">Refresh devices ↻</button>
+          <button id="refresh-devices" class="quiet">Find devices ↻</button>
         </section>
         <section>
           <h3>Your place in the picture</h3>
@@ -478,6 +479,6 @@
         cannot enable an unavailable iPhone remotely.
       </p>
     </dialog>
-    <script type="module" src="app.js?v=20260911-contributions"></script>
+    <script type="module" src="app.js?v=20260927-camera"></script>
   </body>
 </html>
