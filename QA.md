@@ -75,3 +75,28 @@ camera fixture) and `recorded-backup.zip` (produced by the browser check).
 - Existing project IDs, IndexedDB schema, recordings, scripts and selected
   takes are unchanged. This patch changes device discovery/setup only; export
   was not rerun for this patch. Earlier export results above remain historical.
+
+## Portrait / chair cleanup · September 27, 2026
+
+- **25 unit checks passed.** Added threshold/feathering, compatibility with old
+  settings, model switching in fresh workers, GPU failure → CPU retry, and
+  release of stale frames after a model change.
+- Compared the previous filter and the actual new `BackgroundRemover` using a
+  user-supplied screenshot in `production/check-mask.html`. The portrait model
+  removed the large chair region beside the headphones while retaining the
+  face, beard and headphones. This is one still-image example, not a guarantee
+  for every chair, person, lighting condition or moving camera.
+- Verified GPU inference in Chrome on the author's Mac. One warmed crop took
+  about **27 ms**, compared with about **710 ms** for the detailed model on CPU;
+  these are local measurements, not a cross-device performance claim.
+- Switching **Portrait → Fast → Portrait** works. The SDK's module initialization
+  requires a fresh worker for model changes; a regression test covers this.
+- The cleanup slider and quality selection survived a page reload. Defaults are
+  Portrait / 60 for older projects; no take or original recording is rewritten.
+- A generated **2-second 720p MP4 with audio and a portrait overlay** passed
+  through the real export function using the new filter. The container is
+  2.069 seconds because of AAC padding. No microphone was accessed for this test.
+- The comparison/export harness accepts a local image through a file input and
+  generates silent media fixtures in browser memory. No photo or video fixture
+  is included in Git or uploaded; the harness is excluded from the public build.
+  Run the local server and open `/production/check-mask.html` to repeat it.

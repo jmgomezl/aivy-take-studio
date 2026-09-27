@@ -48,6 +48,10 @@
     "wasm/vision_wasm_module_internal.wasm": {
       "bytes": 11756972,
       "sha256": "2dabd8e23c60984628beb7bb338764c81a08e6837145273f59578684b5d53c1b"
+    },
+    "selfie_multiclass_256x256.tflite": {
+      "bytes": 16371837,
+      "sha256": "c6748b1253a99067ef71f7e26ca71096cd449baefa8f101900ea23016507e0e0"
     }
   }
 }

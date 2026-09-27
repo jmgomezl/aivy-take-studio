@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Juanma Gomez. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
 // See LICENSE and LICENSING.md; prior MIT grants are preserved.
+import { maskOptions } from "./portrait-mask.js?v=20260927-portrait";
 import * as M from "./vendor/mediabunny.js";
 import { clamp, edgeGain, overlayRect, takePlan, voiceGain } from "./core.js";
 export { M };
@@ -123,10 +124,12 @@ export class BackgroundRemover {
     this.worker = null;
     this.pending = new Map();
     this.next = 0;
+    this.generation = 0;
+    this.forceCPU = false;
   }
-  request(bitmap) {
+  request(bitmap, settings = {}) {
     this.worker ??= new Worker(
-      new URL("./segment-worker.js", import.meta.url),
+      new URL("./segment-worker.js?v=20260927-portrait", import.meta.url),
       { type: "module" },
     );
     this.worker.onmessage = ({ data }) => {
@@ -135,11 +138,15 @@ export class BackgroundRemover {
         data.foreground?.close();
         return;
       }
+      this.backend = data.backend;
+      this.quality = data.quality;
       this.pending.delete(data.id);
       clearTimeout(p.timer);
-      data.error
-        ? p.reject(Error(data.error))
-        : p.resolve(data.foreground || true);
+      if (data.error) {
+        const error = new Error(data.error);
+        error.gpuUnavailable = data.gpuUnavailable;
+        p.reject(error);
+      } else p.resolve(data.foreground || true);
     };
     this.worker.onerror = (e) => {
       for (const p of this.pending.values()) {
@@ -147,8 +154,7 @@ export class BackgroundRemover {
         p.reject(Error(e.message || "Background removal could not start."));
       }
       this.pending.clear();
-      this.worker.terminate();
-      this.worker = null;
+      this.close();
     };
     return new Promise((resolve, reject) => {
       const id = ++this.next,
@@ -161,13 +167,35 @@ export class BackgroundRemover {
           );
         }, 45000);
       this.pending.set(id, { resolve, reject, timer });
-      this.worker.postMessage({ id, bitmap }, bitmap ? [bitmap] : []);
+      this.worker.postMessage({ id, bitmap, forceCPU: this.forceCPU, settings: { maskQuality: settings.maskQuality, maskCleanup: settings.maskCleanup } }, bitmap ? [bitmap] : []);
     });
   }
-  ready() {
-    return this.request();
+  ready(settings) {
+    const quality = maskOptions(settings).quality;
+    if (this.worker && this.workerQuality === quality && this.preparing)
+      return this.preparing;
+    this.close();
+    this.workerQuality = quality;
+    const preparing = this.request(undefined, settings).catch(error => {
+      if (!error.gpuUnavailable || this.forceCPU) throw error;
+      this.close();
+      this.forceCPU = true;
+      this.workerQuality = quality;
+      const retry = this.request(undefined, settings);
+      this.preparing = preparing;
+      return retry;
+    });
+    this.preparing = preparing;
+    void preparing.catch(() => {
+      if (this.preparing === preparing) this.close();
+    });
+    return preparing;
   }
-  async process(source) {
+  async process(source, settings) {
+    await this.ready(settings);
+    const generation = this.generation;
+    if (this.workerQuality !== maskOptions(settings).quality)
+      throw Error("Background removal settings changed.");
     const w = source.videoWidth || source.width,
       h = source.videoHeight || source.height;
     const bitmap = await createImageBitmap(source, {
@@ -175,9 +203,16 @@ export class BackgroundRemover {
       resizeHeight: Math.round((h * Math.min(640, w)) / w),
       resizeQuality: "high",
     });
-    return this.request(bitmap);
+    if (generation !== this.generation) {
+      bitmap.close();
+      throw Error("Background removal settings changed.");
+    }
+    return this.request(bitmap, settings);
   }
   close() {
+    this.generation++;
+    this.preparing = null;
+    this.workerQuality = null;
     this.worker?.terminate();
     this.worker = null;
     for (const p of this.pending.values()) {
@@ -331,7 +366,7 @@ export async function exportFilm({
     }
     if (cameras.length && project.settings.background === "remove") {
       onProgress(0.03, "Preparing background removal on your device…");
-      await remover.ready();
+      await remover.ready(project.settings);
       check();
     }
     await output.start();
@@ -354,7 +389,7 @@ export async function exportFilm({
           let presenter = shot.canvas;
           try {
             if (project.settings.background === "remove")
-              presenter = await remover.process(shot.canvas);
+              presenter = await remover.process(shot.canvas, project.settings);
             const alpha = edgeGain(
               n / fps - cam.plan.start,
               cam.plan.length,

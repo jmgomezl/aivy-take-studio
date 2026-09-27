@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Copyright (c) 2026 Juanma Gomez. All rights reserved. See ../LICENSE. --><html lang="en"><meta charset="utf-8"><title>Local portrait mask check</title>
+<style>body{background:#101415;color:#eaf1ed;font:16px system-ui;margin:24px}label{display:inline-block;margin:6px}input[type=number]{width:60px}main{display:flex;gap:18px;flex-wrap:wrap}canvas{width:320px;max-width:90vw;background:repeating-conic-gradient(#303b3b 0% 25%,#172121 0% 50%) 0 0/20px 20px}p{max-width:900px}pre{white-space:pre-wrap}</style>
+<h1>Local portrait mask check</h1><p>Choose a local test image. This page never uploads images or requests a camera. Crop values are optional.</p>
+<input type="file" accept="image/*" id="file"><br>
+<label>X <input type="number" id="x" value="0"></label><label>Y <input type="number" id="y" value="0"></label><label>Width <input type="number" id="w" value="0"></label><label>Height <input type="number" id="h" value="0"></label><label>Quality <select id="quality"><option value="portrait">Portrait</option><option value="fast">Fast</option></select></label><label>Cleanup <input id="cleanup" type="number" value="60" min="0" max="100"></label><button id="run">Compare</button><button id="export">Check 2-second export</button><video id="result" controls style="width:640px;max-width:90vw;display:block"></video>
+<pre id="status">Choose an image.</pre><main><section><h2>Original</h2><canvas id="original"></canvas></section><section><h2>Previous model</h2><canvas id="old"></canvas></section><section><h2>Portrait model</h2><canvas id="portrait"></canvas></section></main>
+<script type="module">
+import { BackgroundRemover, M, exportFilm, inspectMedia } from "../media.js?v=20260927-portrait";
+const remover=new BackgroundRemover();
+const $=id=>document.getElementById(id); let bitmap;
+const worker=new Worker('./check-mask-worker.js',{type:'module'});
+$('file').onchange=async()=>{bitmap?.close();bitmap=await createImageBitmap($('file').files[0]);$('status').textContent=`Loaded ${bitmap.width} × ${bitmap.height}.`;};
+$('run').onclick=async()=>{try{
+ $('run').disabled=true; $('status').textContent='Processing locally…';
+ const x=+$('x').value,y=+$('y').value,w=+$('w').value||bitmap.width,h=+$('h').value||bitmap.height;
+ const c=$('original'); c.width=w;c.height=h;c.getContext('2d').drawImage(bitmap,x,y,w,h,0,0,w,h);
+ const stats={};
+ for(const name of ['old','portrait']){
+  const start=performance.now(); let result;
+  if(name==='old'){
+    const input=await createImageBitmap(c);
+    result=await new Promise((resolve,reject)=>{worker.onmessage=e=>e.data.error?reject(Error(e.data.error)):resolve(e.data);worker.onerror=e=>reject(Error(e.message));worker.postMessage({id:1,bitmap:input},[input]);});
+  }else{
+    result={foreground:await remover.process(c,{maskQuality:$('quality').value,maskCleanup:Number($('cleanup').value)}),ms:Math.round(performance.now()-start),labels:[remover.quality,remover.backend]};
+  }
+  const out=$(name);out.width=w;out.height=h;out.getContext('2d').drawImage(result.foreground,0,0);result.foreground.close();
+  stats[name]={ms:result.ms,labels:result.labels};
+  const pixels=out.getContext('2d').getImageData(0,0,w,h).data;
+  stats[name].visibleFraction=Number((pixels.filter((_,i)=>i%4===3).reduce((a,b)=>a+b,0)/(w*h*255)).toFixed(3));
+ }
+ $('status').textContent=JSON.stringify(stats,null,2);
+ }catch(e){$('status').textContent=e.stack;}finally{$('run').disabled=false;}};
+
+// Generated silent fixtures exercise the real export path without a microphone,
+// stored project, upload or recording. The chosen photo stays in this tab.
+async function fixture(canvas) {
+  const target=new M.BufferTarget(),output=new M.Output({format:new M.Mp4OutputFormat({fastStart:'in-memory'}),target});
+  const video=new M.CanvasSource(canvas,{codec:'avc',bitrate:1500000}),audio=new M.AudioBufferSource({codec:'aac',bitrate:64000});
+  output.addVideoTrack(video,{frameRate:30});output.addAudioTrack(audio);await output.start();
+  await audio.add(new AudioBuffer({length:96000,numberOfChannels:1,sampleRate:48000}));audio.close();
+  for(let n=0;n<60;n++)await video.add(n/30,1/30);
+  video.close();await output.finalize();return new Blob([target.buffer],{type:'video/mp4'});
+}
+let resultUrl;
+$('export').onclick=async()=>{ $('export').disabled=true;$('run').disabled=true;try{
+  if(!bitmap)throw Error('Choose and compare an image first.');
+  const original=$('original'),camera=new OffscreenCanvas(640,480),cc=camera.getContext('2d');
+  cc.fillStyle='#182122';cc.fillRect(0,0,640,480);cc.drawImage(original,160,0,320,480);
+  const base=new OffscreenCanvas(640,360),bc=base.getContext('2d');bc.fillStyle='#153e38';bc.fillRect(0,0,640,360);
+  const baseBlob=await fixture(base),blob=await fixture(camera);
+  const take={id:'fixture',chapter:0,blob,duration:2,hasVideo:true,showCamera:true,trimIn:0,trimOut:2,offset:0};
+  const project={title:'Local filter export check',duration:2,chapters:[{start:0,end:2}],selected:{0:'fixture'},settings:{background:'remove',maskQuality:$('quality').value,maskCleanup:Number($('cleanup').value),size:0.35,position:'left',mirror:false,polish:false}};
+  const started=performance.now();
+  const result=await exportFilm({project,takes:[take],baseBlob,resolution:720,canvas:document.createElement('canvas'),remover,onProgress:(p,text)=>{$('status').textContent=Math.round(p*100)+'% '+text;}});
+  const info=await inspectMedia(result.blob);
+  if(resultUrl)URL.revokeObjectURL(resultUrl);resultUrl=URL.createObjectURL(result.blob);$('result').src=resultUrl;
+  $('status').textContent=JSON.stringify({export:info,seconds:Math.round((performance.now()-started)/1000),quality:remover.quality,backend:remover.backend});
+ }catch(e){$('status').textContent=e.stack;}finally{$('export').disabled=false;$('run').disabled=false;}};
+</script></html>

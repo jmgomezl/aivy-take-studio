@@ -36,6 +36,10 @@ await download(
   "selfie_segmenter.tflite",
 );
 await download(
+  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite",
+  "selfie_multiclass_256x256.tflite",
+);
+await download(
   "https://raw.githubusercontent.com/google-ai-edge/mediapipe/master/LICENSE",
   "MEDIAPIPE-LICENSE.txt",
 );

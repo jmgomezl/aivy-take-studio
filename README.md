@@ -6,7 +6,7 @@ The 14-chapter Quorum film is included as a sample project.
 
 [Open Take Studio](https://quorum.aivylabs.xyz/demo-video/studio/)
 
-**Proprietary software · v1.1.1.** Hosted use is permitted for your personal or
+**Proprietary software · v1.2.0.** Hosted use is permitted for your personal or
 commercial videos; software reuse and self-hosting require separate permission.
 Your recordings remain yours. [License and prior MIT release](LICENSING.md).
 
@@ -56,9 +56,15 @@ video. Download it, watch it once in full and submit it yourself.
   If Chrome still exposes no cameras, save your work and restart the browser.
   A disconnected camera prevents a new camera take; a disconnection during
   recording stops and retains the captured part.
-- **Remove background** runs Google's MediaPipe selfie segmentation locally in
-  a worker. No camera frames go to an AI service. Front lighting and an uncluttered
-  background improve edges; this is not a guarantee of perfect hair masking.
+- **Remove background → Portrait** uses Google's multiclass portrait model to
+  separate hair, skin, clothes and accessories from the background. It runs in
+  a local worker with GPU acceleration and a CPU fallback. **Fast** uses the
+  smaller model when a device needs lighter processing.
+- **Chair & edge cleanup** removes uncertain background pixels with a soft edge.
+  Increase it if furniture remains; reduce it if hair or headphones disappear.
+  Preview and export use the same settings, including for existing camera takes.
+  No frames go to an AI service. Similar colors, lighting and motion can still
+  confuse the model; this is not a guarantee of perfect removal.
 - The presenter defaults to the **lower left**. Change corner, size or mirror
   orientation. Turn the camera off for individual chapters where it covers
   important evidence. A rounded frame is available as an alternative.
@@ -83,7 +89,7 @@ echo. Use a retake when the delivery does not fit; headphones help during review
 | Takes and settings | IndexedDB, scoped to this browser and origin. A take is called saved only after its transaction commits. |
 | Backup / restore | Local ZIP via fflate. Restoring creates another project; it does not overwrite the original. |
 | Microphone and camera | Browser `getUserMedia` and `MediaRecorder`; explicit user controls. |
-| Background removal | Self-hosted MediaPipe 1.0.1 and the pinned selfie model, in a Web Worker. |
+| Background removal | Self-hosted MediaPipe 1.0.1, pinned portrait/fast models, GPU/CPU in a Web Worker. |
 | Voice assembly | Decoded audio at 48 kHz, deterministic chapter placement, gain and fades. WAV export available separately. |
 | Final composition | Mediabunny 1.56.1 + WebCodecs, a 30 fps canvas with exact frame timestamps. 1080p or 720p. |
 | Format | H.264/AAC MP4 when the browser can encode both; VP9/Opus WebM fallback. The download uses its actual format. |

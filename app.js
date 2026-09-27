@@ -21,7 +21,7 @@ import {
   drawPresenter,
   exportFilm,
   audioCache,
-} from "./media.js";
+} from "./media.js?v=20260927-portrait";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.js";
 const $ = (id) => document.getElementById(id),
   base = $("base-video"),
@@ -31,6 +31,8 @@ const $ = (id) => document.getElementById(id),
   ctx = canvas.getContext("2d");
 const defaults = {
   background: "remove",
+  maskQuality: "portrait",
+  maskCleanup: 60,
   position: "left",
   size: 0.2,
   mirror: true,
@@ -75,6 +77,7 @@ let devicesConfig = "",
   deviceListGeneration = 0;
 let liveForeground = null,
   segmentBusy = false,
+  segmentGeneration = 0,
   lastSegment = 0,
   segmentError = false,
   lastCameraSource = null,
@@ -300,6 +303,9 @@ function applySettings() {
   const s = project.settings;
   $("camera-enabled").checked = s.camera;
   $("background").value = s.background;
+  $("mask-quality").value = s.maskQuality;
+  $("mask-cleanup").value = s.maskCleanup;
+  $("mask-controls").hidden = s.background !== "remove";
   $("position").value = s.position;
   $("overlay-size").value = s.size;
   $("mirror-camera").checked = s.mirror;
@@ -311,6 +317,8 @@ function settingsChanged() {
   Object.assign(project.settings, {
     camera: $("camera-enabled").checked,
     background: $("background").value,
+    maskQuality: $("mask-quality").value,
+    maskCleanup: Number($("mask-cleanup").value),
     position: $("position").value,
     size: Number($("overlay-size").value),
     mirror: $("mirror-camera").checked,
@@ -321,7 +329,9 @@ function settingsChanged() {
     micLabel: $("mic-select").selectedOptions[0]?.dataset.label || "",
     cameraLabel: $("camera-select").selectedOptions[0]?.dataset.label || "",
   });
+  segmentGeneration++;
   segmentError = false;
+  $("mask-controls").hidden = project.settings.background !== "remove";
   liveForeground?.close();
   liveForeground = null;
   void persist().catch(() => {});
@@ -394,6 +404,7 @@ function findDevices() {
 }
 function stopDevices() {
   deviceGeneration++;
+  segmentGeneration++;
   devicesConfig = "";
   devices?.getTracks().forEach((t) => t.stop());
   devices = null;
@@ -499,9 +510,8 @@ async function enableDevicesNow() {
   if (s.camera && s.background === "remove") {
     $("mask-status").textContent = "Preparing local background removal…";
     try {
-      await remover.ready();
-      $("mask-status").textContent =
-        "Background removal ready · processed on this device.";
+      await remover.ready(s);
+      updateMaskStatus();
     } catch (e) {
       segmentError = true;
       $("mask-status").textContent = e.message;
@@ -511,6 +521,12 @@ async function enableDevicesNow() {
       );
     }
   }
+}
+function updateMaskStatus() {
+  $("mask-status").textContent = remover.quality === "portrait"
+    ? (remover.backend === "GPU" ? "Portrait cutout · GPU accelerated · on this device."
+      : "Portrait cutout · CPU processing. Choose Fast if preview feels slow.")
+    : "Fast cutout · on this device. Portrait separates chairs more accurately.";
 }
 async function selectChapter(i) {
   if (locked()) return;
@@ -945,6 +961,7 @@ function draw() {
     if (cam && cam.readyState >= 2 && project.settings.background !== "none") {
       if (project.settings.background === "remove") {
         if (lastCameraSource !== cam) {
+          segmentGeneration++;
           liveForeground?.close();
           liveForeground = null;
           lastCameraSource = cam;
@@ -956,13 +973,17 @@ function draw() {
         ) {
           segmentBusy = true;
           lastSegment = performance.now();
+          const generation = segmentGeneration;
           remover
-            .process(cam)
+            .process(cam, project.settings)
             .then((frame) => {
+              if (generation !== segmentGeneration) { frame.close(); return; }
+              updateMaskStatus();
               liveForeground?.close();
               liveForeground = frame;
             })
             .catch((e) => {
+              if (generation !== segmentGeneration) return;
               segmentError = true;
               $("mask-status").textContent = e.message;
               message(
@@ -1291,6 +1312,8 @@ $("refresh-devices").onclick = () => run(findDevices);
 for (const id of [
   "camera-enabled",
   "background",
+  "mask-quality",
+  "mask-cleanup",
   "position",
   "overlay-size",
   "mirror-camera",

@@ -294,7 +294,16 @@
               <option value="card">Keep in a rounded frame</option>
               <option value="none">Camera hidden</option>
             </select></label
-          ><label
+          >
+          <div id="mask-controls">
+            <label>Cutout quality<select id="mask-quality">
+              <option value="portrait">Portrait · cleaner cutout</option>
+              <option value="fast">Fast · lighter processing</option>
+            </select></label>
+            <label>Chair &amp; edge cleanup<input type="range" id="mask-cleanup" min="0" max="100" step="5" value="60" aria-describedby="cleanup-help" /></label>
+            <p id="cleanup-help" class="muted">Gentle ← → Strong. Reduce if hair or headphones disappear.</p>
+          </div>
+          <label
             >Corner<select id="position">
               <option value="left">Lower left</option>
               <option value="right">Lower right</option>
@@ -479,6 +488,6 @@
         cannot enable an unavailable iPhone remotely.
       </p>
     </dialog>
-    <script type="module" src="app.js?v=20260927-camera"></script>
+    <script type="module" src="app.js?v=20260927-portrait"></script>
   </body>
 </html>
