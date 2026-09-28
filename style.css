@@ -1462,3 +1462,6 @@ fieldset:disabled {
 .transcript-row textarea:focus-visible {
   border-color: #4c685c;
 }
+
+#import-script-list { max-height: 240px; overflow-y: auto; padding-left: 24px; line-height: 1.8; overflow-wrap: anywhere; }
+#import-script-summary { margin-bottom: 16px; }

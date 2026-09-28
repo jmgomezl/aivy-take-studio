@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Juanma Gomez. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
-import { scriptChapters } from "./voice.js";
+import { scriptChapters, reflowVoice } from "./voice.js";
 export const SCRIPT_FILE_LIMIT = 1024 * 1024;
 export function parseScriptFile(name, source) {
   if (!/\.(txt|md|markdown|json)$/i.test(name))
@@ -82,4 +82,53 @@ export async function readScriptFile(file) {
   if (file.size > SCRIPT_FILE_LIMIT)
     throw Error("Choose a script file smaller than 1 MB.");
   return parseScriptFile(file.name, await file.text());
+}
+
+// Keep existing chapter indexes stable: takes and visual cues refer to them.
+export function mergeScriptSections(project, imported, takes = []) {
+  if (project.workflow !== "voice")
+    throw Error(
+      "Whole-script import into an existing project needs Voice first.",
+    );
+  const candidate = structuredClone(project);
+  const normalize = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  const used = new Set();
+  let added = 0,
+    kept = 0;
+  const entries = [];
+  for (const c of imported.chapters) {
+    const match = candidate.chapters.findIndex(
+      (old, i) =>
+        !used.has(i) &&
+        (normalize(old.script) === normalize(c.script) ||
+          normalize(old.title) === normalize(c.title)),
+    );
+    if (match >= 0) {
+      used.add(match);
+      kept++;
+      entries.push({ title: candidate.chapters[match].title, kept: true });
+      continue;
+    }
+    const blank = candidate.chapters.findIndex(
+      (old, i) =>
+        !used.has(i) &&
+        !old.script.trim() &&
+        !takes.some((t) => t.chapter === i) &&
+        !candidate.selected?.[i] &&
+        !old.visuals?.some((v) => v.asset),
+    );
+    const at = blank >= 0 ? blank : candidate.chapters.length;
+    candidate.chapters[at] = structuredClone(c);
+    used.add(at);
+    added++;
+    entries.push({ title: c.title, kept: false });
+  }
+  if (candidate.chapters.length > 100)
+    throw Error("Maximum 100 sections. Use a new project for this script.");
+  reflowVoice(candidate, takes);
+  return { project: candidate, added, kept, entries };
 }

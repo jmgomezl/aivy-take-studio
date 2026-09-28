@@ -1,6 +1,6 @@
 {
   "name": "aivy-take-studio",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "type": "module",
   "description": "Private, chapter-based human narration and presenter video studio",

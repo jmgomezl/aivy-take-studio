@@ -144,3 +144,11 @@ availability and background cutout quality remain hardware/lighting dependent.
 - Malformed JSON displayed a readable error without changing the draft.
 - Imported TXT, selected its second section and saved: only the current chapter script changed; the second project chapter remained intact. Existing projects remained listed.
 - UI screenshot capture and further browser checks were interrupted by an intermittent browser connection timeout. No production recording tab was reloaded.
+
+## Whole-script repair · 2026-09-27
+
+- Read the supplied SCRIPT-v2.md: 12 Markdown headings and 12 narration sections.
+- Chrome local UI reproduction: started with its first section, imported the complete file in Edit. Default scope was Whole script; preview showed 12 detected, 11 to add and 1 retained. Save created 12 chapter buttons; Next opened section 2 with the correct title and narration.
+- Reimport showed 0 to add, 12 already here and disabled Import. At chapter 12, Next was disabled.
+- 44 automated tests pass, including preservation of four takes/selected take/indexes, existing rewritten scripts and visual cues, blank placeholders, repeat imports, and failure without mutation when limits are exceeded.
+- Production recording tabs were not reloaded or modified during testing.

@@ -18,7 +18,10 @@ import {
 } from "./devices.js?v=20260927-camera";
 import { isVoice, scriptChapters, reflowVoice } from "./voice.js";
 import { setupVoice } from "./voice-ui.js?v=20260927-voice";
-import { readScriptFile } from "./script-import.js";
+import {
+  readScriptFile,
+  mergeScriptSections,
+} from "./script-import.js?v=20260927-whole-script";
 import * as Store from "./storage.js";
 import {
   inspectMedia,
@@ -196,6 +199,9 @@ function setMode(value) {
     "recording",
     "playing",
   ].includes(value);
+  $("previous").disabled = locked() || !project || index === 0;
+  $("next").disabled =
+    locked() || !project || index >= project.chapters.length - 1;
   $("record").disabled = locked() || !ready || Boolean(deviceDiscoveryPromise);
   syncDeviceControls();
   $("mode-label").textContent =
@@ -506,6 +512,9 @@ function findDevices() {
   })().finally(() => {
     deviceDiscoveryPromise = null;
     syncDeviceControls();
+    $("previous").disabled = locked() || !project || index === 0;
+    $("next").disabled =
+      locked() || !project || index >= project.chapters.length - 1;
     $("record").disabled = locked() || !ready;
   });
   syncDeviceControls();
@@ -1058,6 +1067,20 @@ async function loadProject(p) {
   }
   base.load();
   if (isVoice(p)) reflowVoice(p, takes);
+  renderChapters();
+  applySettings();
+  await refreshDevices();
+  ready = true;
+  setMode("idle");
+  await selectChapter(0);
+  refreshProgress();
+  message(
+    isVoice(p)
+      ? "Voice first. Record at your own pace, then match demo clips to your words."
+      : "Your video is ready. Start with any chapter; your takes stay on this device.",
+  );
+}
+function renderChapters() {
   $("chapters").replaceChildren();
   project.chapters.forEach((c, i) => {
     const b = document.createElement("button");
@@ -1073,17 +1096,6 @@ async function loadProject(p) {
     project.chapters.length < 7
       ? `repeat(${project.chapters.length},minmax(0,1fr))`
       : "";
-  applySettings();
-  await refreshDevices();
-  ready = true;
-  setMode("idle");
-  await selectChapter(0);
-  refreshProgress();
-  message(
-    isVoice(p)
-      ? "Voice first. Record at your own pace, then match demo clips to your words."
-      : "Your video is ready. Start with any chapter; your takes stay on this device.",
-  );
 }
 async function refreshProjectMenu() {
   const all = (await Store.projects()).sort(
@@ -1536,6 +1548,40 @@ function stageVoiceImport(data) {
   $("new-script-file-status").textContent =
     `${data.chapters.length} sections ready · timings follow your voice`;
 }
+function updateImportScope() {
+  const all =
+    importedEdit &&
+    isVoice(project) &&
+    $("import-script-scope").value === "all";
+  $("script-edit-fields").hidden = Boolean(all);
+  $("import-one-section").hidden = Boolean(all);
+  $("import-script-summary").hidden = !all;
+  $("save-script").disabled = false;
+  $("save-script").textContent = "Save script →";
+  if (all) {
+    try {
+      const plan = mergeScriptSections(project, importedEdit, takes);
+      $("import-script-count").textContent =
+        `${importedEdit.chapters.length} sections found · ${plan.added} to add · ${plan.kept} already here. Existing scripts and takes stay unchanged.`;
+      $("import-script-list").replaceChildren(
+        ...plan.entries.map((entry) => {
+          const li = document.createElement("li");
+          li.textContent = `${entry.title}${entry.kept ? " · already here" : ""}`;
+          return li;
+        }),
+      );
+      $("save-script").textContent = plan.added
+        ? `Import ${plan.added} sections →`
+        : "All sections already imported";
+      $("save-script").disabled = !plan.added;
+    } catch (e) {
+      $("import-script-count").textContent = e.message;
+      $("import-script-list").replaceChildren();
+      $("save-script").disabled = true;
+    }
+  } else stageEditSection();
+}
+$("import-script-scope").onchange = updateImportScope;
 function stageEditSection() {
   const c = importedEdit?.chapters[Number($("imported-script-section").value)];
   if (!c) return;
@@ -1572,7 +1618,10 @@ for (const target of ["new", "edit"]) {
         $("imported-script-sections").hidden = false;
         $("edit-script-file-status").textContent =
           `${file.name} · ${data.chapters.length} section${data.chapters.length === 1 ? "" : "s"} · save to apply`;
-        stageEditSection();
+        $("import-script-scope").value = isVoice(project) ? "all" : "one";
+        $("import-script-scope").querySelector('option[value="all"]').disabled =
+          !isVoice(project);
+        updateImportScope();
       }
     });
 }
@@ -1861,6 +1910,7 @@ $("project").onchange = () =>
 $("edit-script").onclick = () => {
   scriptReadVersion++;
   importedEdit = null;
+  updateImportScope();
   $("imported-script-sections").hidden = true;
   $("edit-script-file-status").textContent =
     "TXT, Markdown or chapter JSON · preview before saving";
@@ -1872,6 +1922,31 @@ $("edit-script").onclick = () => {
 };
 $("save-script").onclick = () =>
   run(async () => {
+    if (locked()) return;
+    if (
+      importedEdit &&
+      isVoice(project) &&
+      $("import-script-scope").value === "all"
+    ) {
+      const plan = mergeScriptSections(project, importedEdit, takes);
+      if (!plan.added) return;
+      setMode("saving");
+      try {
+        await saveQueue;
+        plan.project.updatedAt = Date.now();
+        await Store.saveProject(plan.project);
+        project = plan.project;
+        $("script-dialog").close();
+      } finally {
+        setMode("idle");
+      }
+      renderChapters();
+      await selectChapter(index);
+      message(
+        `${plan.added} sections added. Your existing takes are preserved.`,
+      );
+      return;
+    }
     Object.assign(chapter(), {
       title: $("edit-title").value,
       script: $("edit-words").value,

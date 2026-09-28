@@ -45,7 +45,7 @@ camera effects, audio polish, preview and export.
    too short, choose another cut or explicitly enable **Hold last frame**.
    The studio does not invent demo footage or silently loop or speed it up.
 
-**Import into an existing script:** click **Edit → Import script file**, choose a section, then **Save script**. To bring in the entire file, choose **Use all sections in a new project** and review before creating it. Existing takes and projects are preserved. Imports support up to 100 sections, 1 MB files and a 20-minute estimated story.
+**Import into an existing script:** in Voice first, **Edit → Import script file** reads every section by default. Review the detected sections, then **Import sections** to add them to this project. Existing sections matched by title or spoken text keep their scripts, takes, trims and visuals; missing sections are appended, without renumbering existing takes. Reimporting the same file does not add duplicates. An empty, unrecorded placeholder can become the first section. Choose **Only one section** for a deliberate single-chapter edit, or **Use all sections in a new project** for a separate story. Video first keeps its fixed chapter timing and single-section editor. Imports support up to 100 sections, 1 MB files and a 20-minute story.
 
 Visual cues are relative to each section. After a shorter retake or a trim,
 review their timing; invalid cues block video export with a specific explanation.

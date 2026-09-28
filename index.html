@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Take Studio · Aivy</title>
-    <link rel="stylesheet" href="style.css?v=20260927-script-import" />
+    <link rel="stylesheet" href="style.css?v=20260927-whole-script" />
   </head>
   <body>
     <header class="masthead">
@@ -582,29 +582,42 @@
       </p>
       <div id="imported-script-sections" hidden>
         <label
+          >Import scope<select id="import-script-scope">
+            <option value="all">Whole script · keep existing takes</option>
+            <option value="one">Only one section</option>
+          </select></label
+        >
+        <div id="import-script-summary" hidden>
+          <p id="import-script-count" class="muted"></p>
+          <ol id="import-script-list"></ol>
+        </div>
+        <label id="import-one-section"
           >Section to load<select id="imported-script-section"></select
         ></label>
         <button id="import-all-script" class="quiet" type="button">
           Use all sections in a new project →
         </button>
       </div>
-      <label
-        >Chapter title<input
-          id="edit-title"
-          type="text"
-          maxlength="180" /></label
-      ><label
-        >Your script<textarea
-          id="edit-words"
-          rows="10"
-          maxlength="20000"
-        ></textarea></label
-      ><label
-        >Direction to yourself<input
-          id="edit-direction"
-          type="text"
-          maxlength="1000" /></label
-      ><button id="save-script" class="primary">Save script →</button>
+      <div id="script-edit-fields">
+        <label
+          >Chapter title<input
+            id="edit-title"
+            type="text"
+            maxlength="180" /></label
+        ><label
+          >Your script<textarea
+            id="edit-words"
+            rows="10"
+            maxlength="20000"
+          ></textarea></label
+        ><label
+          >Direction to yourself<input
+            id="edit-direction"
+            type="text"
+            maxlength="1000"
+        /></label>
+      </div>
+      <button id="save-script" class="primary">Save script →</button>
       <p class="muted" id="script-timing-note">
         The chapter timing stays fixed so your voice follows the visual edit.
       </p>
@@ -652,6 +665,6 @@
         cannot enable an unavailable iPhone remotely.
       </p>
     </dialog>
-    <script type="module" src="app.js?v=20260927-script-import"></script>
+    <script type="module" src="app.js?v=20260927-whole-script"></script>
   </body>
 </html>
