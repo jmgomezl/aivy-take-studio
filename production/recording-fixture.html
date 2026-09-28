@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Take Studio synthetic device QA</title>
+<p>Loading synthetic-device QA. No hardware microphone or camera is used.</p>
+<script type="module">
+const base=new URL('../',location.href).href;
+const html=await(await fetch(base+'index.html')).text();
+document.open();
+document.write(html.replace('<head>',`<head><base href="${base}"><script src="production/synthetic-devices.js"><\/script>`));
+document.close();
+</script>

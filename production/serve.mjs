@@ -9,7 +9,7 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.env.TAKE_STUDIO_PORT || 5183);
 const types = {
   ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
-  ".wasm": "application/wasm", ".json": "application/json", ".mp4": "video/mp4",
+  ".mjs": "text/javascript", ".wasm": "application/wasm", ".json": "application/json", ".mp4": "video/mp4",
   ".md": "text/plain", ".txt": "text/plain", ".woff2": "font/woff2",
 };
 

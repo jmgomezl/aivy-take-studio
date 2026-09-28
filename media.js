@@ -1,3 +1,4 @@
+import { isVoice, visualPlan, drawTitle } from "./voice.js";
 // Copyright (c) 2026 Juanma Gomez. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Take-Studio-Proprietary
 // See LICENSE and LICENSING.md; prior MIT grants are preserved.
@@ -167,7 +168,18 @@ export class BackgroundRemover {
           );
         }, 45000);
       this.pending.set(id, { resolve, reject, timer });
-      this.worker.postMessage({ id, bitmap, forceCPU: this.forceCPU, settings: { maskQuality: settings.maskQuality, maskCleanup: settings.maskCleanup } }, bitmap ? [bitmap] : []);
+      this.worker.postMessage(
+        {
+          id,
+          bitmap,
+          forceCPU: this.forceCPU,
+          settings: {
+            maskQuality: settings.maskQuality,
+            maskCleanup: settings.maskCleanup,
+          },
+        },
+        bitmap ? [bitmap] : [],
+      );
     });
   }
   ready(settings) {
@@ -176,7 +188,7 @@ export class BackgroundRemover {
       return this.preparing;
     this.close();
     this.workerQuality = quality;
-    const preparing = this.request(undefined, settings).catch(error => {
+    const preparing = this.request(undefined, settings).catch((error) => {
       if (!error.gpuUnavailable || this.forceCPU) throw error;
       this.close();
       this.forceCPU = true;
@@ -266,8 +278,8 @@ export async function exportFilm({
   signal,
   onProgress,
 }) {
-  const source = mediaInput(baseBlob),
-    opened = [source],
+  const source = isVoice(project) ? null : mediaInput(baseBlob),
+    opened = source ? [source] : [],
     iterators = [];
   let output;
   const check = () => {
@@ -275,8 +287,8 @@ export async function exportFilm({
       throw new DOMException("Export canceled.", "AbortError");
   };
   try {
-    const videoTrack = await source.getPrimaryVideoTrack();
-    if (!videoTrack || !(await videoTrack.canDecode()))
+    const videoTrack = source ? await source.getPrimaryVideoTrack() : null;
+    if (source && (!videoTrack || !(await videoTrack.canDecode())))
       throw Error(
         "This browser cannot decode the visual video. Try current Chrome or Edge.",
       );
@@ -326,16 +338,49 @@ export async function exportFilm({
     onProgress(0.01, "Aligning voice takes…");
     const audio = await mixNarration(project, takes, () => check());
     check();
-    const first = await source.getFirstTimestamp();
+    const first = source ? await source.getFirstTimestamp() : 0;
     const timestamps = function* (start, count) {
       for (let n = 0; n < count; n++) yield start + n / fps;
     };
-    const baseFrames = new M.CanvasSink(videoTrack, {
-      width: w,
-      height: h,
-      fit: "contain",
-    }).canvasesAtTimestamps(timestamps(first, total));
-    iterators.push(baseFrames);
+    const baseFrames = source
+      ? new M.CanvasSink(videoTrack, {
+          width: w,
+          height: h,
+          fit: "contain",
+        }).canvasesAtTimestamps(timestamps(first, total))
+      : null;
+    if (baseFrames) iterators.push(baseFrames);
+    const visuals = [];
+    if (isVoice(project))
+      for (const slot of visualPlan(project)) {
+        check();
+        const startFrame = Math.ceil(slot.start * fps),
+          endFrame = Math.min(total, Math.ceil(slot.end * fps));
+        let frames = null;
+        if (slot.asset) {
+          const input = mediaInput(slot.asset.blob);
+          opened.push(input);
+          const track = await input.getPrimaryVideoTrack();
+          if (!track || !(await track.canDecode()))
+            throw Error(`Cannot decode clip: ${slot.asset.name}`);
+          const origin = await input.getFirstTimestamp();
+          const times = function* () {
+            for (let n = startFrame; n < endFrame; n++)
+              yield origin +
+                Math.min(
+                  slot.asset.duration - 0.05,
+                  slot.source + n / fps - slot.start,
+                );
+          };
+          frames = new M.CanvasSink(track, {
+            width: w,
+            height: h,
+            fit: "contain",
+          }).canvasesAtTimestamps(times());
+          iterators.push(frames);
+        }
+        visuals.push({ ...slot, startFrame, endFrame, frames });
+      }
     const cameras = [];
     for (let i = 0; i < project.chapters.length; i++) {
       const take = takes.find((t) => t.id === project.selected?.[i]);
@@ -372,14 +417,24 @@ export async function exportFilm({
     await output.start();
     await audioSource.add(audio);
     audioSource.close();
-    let current = 0;
+    let current = 0,
+      visualIndex = 0;
     for (let n = 0; n < total; n++) {
       check();
-      const frame = (await baseFrames.next()).value;
-      if (!frame) throw Error(`Visual frame ${n + 1} could not be decoded.`);
-      ctx.fillStyle = "#080b0b";
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(frame.canvas, 0, 0, w, h);
+      while (
+        visualIndex < visuals.length - 1 &&
+        n >= visuals[visualIndex].endFrame
+      )
+        visualIndex++;
+      const slot = visuals[visualIndex];
+      if (slot && !slot.frames) drawTitle(ctx, w, h, slot.title);
+      else {
+        const frame = (await (slot?.frames || baseFrames).next()).value;
+        if (!frame) throw Error(`Visual frame ${n + 1} could not be decoded.`);
+        ctx.fillStyle = "#080b0b";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(frame.canvas, 0, 0, w, h);
+      }
       while (current < cameras.length && n >= cameras[current].endFrame)
         current++;
       const cam = cameras[current];

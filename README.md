@@ -6,7 +6,7 @@ The 14-chapter Quorum film is included as a sample project.
 
 [Open Take Studio](https://quorum.aivylabs.xyz/demo-video/studio/)
 
-**Proprietary software · v1.2.0.** Hosted use is permitted for your personal or
+**Proprietary software · v1.3.0.** Hosted use is permitted for your personal or
 commercial videos; software reuse and self-hosting require separate permission.
 Your recordings remain yours. [License and prior MIT release](LICENSING.md).
 
@@ -16,7 +16,44 @@ Choose a chapter → record voice / camera → choose & trim a take
                        preview → combine → download video + voice
 ```
 
-## Record
+## Two ways to start
+
+Choose a workflow under **New project**. Both keep every take and use the same
+camera effects, audio polish, preview and export.
+
+| Start with | What sets the timing | Best for |
+| --- | --- | --- |
+| **Video first** | Your existing demo film | A finished visual edit that needs narration |
+| **Voice first** | Your selected, trimmed voice takes | Telling the story naturally, then adding footage |
+
+### Voice first
+
+1. Paste your script from ChatGPT, Claude or your own notes. Use `# Headings` to name sections, or **blank lines** to separate a plain-text script. You can start blank and
+   add sections later. No chatbot account is connected to the studio.
+2. Record or import each section at your own pace. Press **Stop** when done;
+   the full take sets the section length. Switching or trimming takes moves the
+   following sections automatically. The whole project is limited to 20 minutes.
+3. Optionally choose **Transcribe this take**. Whisper Tiny runs in a worker
+   on your device, with English, Spanish or automatic language detection.
+   First use downloads approximately 65 MB of self-hosted runtime/model files;
+   recordings are never sent to a transcription service. Canceling leaves your
+   takes intact. Automatic words and timestamps can be wrong: listen and edit.
+4. Import your real demo clips. Click a transcript timestamp to listen there;
+   **+ Visual** creates a cut at that phrase. Choose a clip and its source start,
+   or a title card. You can also add a cue at an exact second manually.
+5. Review and export. Clips play at **1×** with their audio muted. If footage is
+   too short, choose another cut or explicitly enable **Hold last frame**.
+   The studio does not invent demo footage or silently loop or speed it up.
+
+Visual cues are relative to each section. After a shorter retake or a trim,
+review their timing; invalid cues block video export with a specific explanation.
+The ZIP backup includes clip originals, transcripts, cues and all takes. Older
+video-first backups still restore as separate projects.
+
+This is a guided editor, not an autonomous video generator: you choose the
+footage and cuts. Transcript corrections change the guide, not the audio.
+
+## Record (Video first)
 
 1. **Set up mic & camera.** Choose your microphone. Optionally enable the camera,
    choose a device, then press **Enable preview**. Nothing records before you
@@ -90,6 +127,7 @@ echo. Use a retake when the delivery does not fit; headphones help during review
 | Backup / restore | Local ZIP via fflate. Restoring creates another project; it does not overwrite the original. |
 | Microphone and camera | Browser `getUserMedia` and `MediaRecorder`; explicit user controls. |
 | Background removal | Self-hosted MediaPipe 1.0.1, pinned portrait/fast models, GPU/CPU in a Web Worker. |
+| Local transcription | Transformers.js 3.8.1 + multilingual Whisper Tiny q8, pinned and self-hosted. Phrase timestamps, editable text, cancelable worker. |
 | Voice assembly | Decoded audio at 48 kHz, deterministic chapter placement, gain and fades. WAV export available separately. |
 | Final composition | Mediabunny 1.56.1 + WebCodecs, a 30 fps canvas with exact frame timestamps. 1080p or 720p. |
 | Format | H.264/AAC MP4 when the browser can encode both; VP9/Opus WebM fallback. The download uses its actual format. |
@@ -144,8 +182,8 @@ All default assets live in [`presets/quorum/`](presets/quorum/README.md) and
 `assets/`; custom projects use your imported video and script. The default
 project and IndexedDB identifiers remain compatible with the original studio.
 
-To reproduce processing dependencies, run `npm ci --ignore-scripts && npm run
-vendor`. See [third-party notices](THIRD-PARTY.md) and [checks](QA.md).
+To reproduce processing dependencies, run `npm ci --ignore-scripts`, then
+`npm run vendor` and `npm run vendor:speech`. See [third-party notices](THIRD-PARTY.md) and [checks](QA.md).
 
 **Submission boundary:** this is a founder's recording utility. It does not
 extend Quorum's insurance functionality or prove a new blockchain integration.

@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Take Studio · Aivy</title>
-    <link rel="stylesheet" href="style.css?v=1" />
+    <link rel="stylesheet" href="style.css?v=20260927-voice" />
   </head>
   <body>
     <header class="masthead">
@@ -53,6 +53,11 @@
       <div id="notice" class="notice" role="status" aria-live="polite">
         Loading your video and script…
       </div>
+      <div id="workflow-label" class="workflow-path" hidden>
+        <strong>Voice first</strong><span>01 Record your story</span><i>→</i
+        ><span>02 Match the visuals</span><i>→</i
+        ><span>03 Review & export</span>
+      </div>
       <div class="workbench">
         <section class="stage-panel" aria-label="Video and recording controls">
           <div class="clockbar">
@@ -61,7 +66,8 @@
               ><strong id="elapsed">00:00<span>.0</span></strong>
             </div>
             <div class="clock-small">
-              <span>Chapter left</span><strong id="remaining">00:16</strong>
+              <span id="chapter-left-label">Chapter left</span
+              ><strong id="remaining">00:16</strong>
             </div>
             <div class="clock-small">
               <span>In the film</span
@@ -223,6 +229,78 @@
           </div>
         </div>
       </section>
+      <section id="voice-workspace" class="voice-workspace" hidden>
+        <div class="section-label">
+          <div>
+            <span class="eyebrow">02 · Let the pictures follow your voice</span>
+            <h2>Build around what you said.</h2>
+          </div>
+          <button id="add-section" class="quiet">+ Section</button>
+        </div>
+        <p id="voice-timing-note" class="muted"></p>
+        <div class="voice-columns">
+          <section class="voice-transcript" aria-label="Transcript">
+            <span class="eyebrow">Listen · choose a moment</span>
+            <h3 id="voice-section-label"></h3>
+            <fieldset id="speech-controls">
+              <label
+                >Spoken language<select id="speech-language">
+                  <option value="english">English</option>
+                  <option value="spanish">Español</option>
+                  <option value="">Detect language</option>
+                </select></label
+              ><button id="transcribe" class="secondary">
+                Transcribe this take
+              </button>
+            </fieldset>
+            <button id="cancel-transcribe" class="quiet" hidden>
+              Cancel transcription
+            </button>
+            <p id="speech-status" class="muted" role="status">
+              Local transcription · first use downloads ~65 MB. Your recordings
+              stay here.
+            </p>
+            <p id="transcript-empty" class="muted">
+              Record or import a take, then turn your voice into a guide for the
+              visuals.
+            </p>
+            <div id="transcript-rows"></div>
+          </section>
+          <section class="voice-visuals" aria-label="Visual arrangement">
+            <div class="section-label">
+              <span class="eyebrow">Show · at the right moment</span
+              ><span id="asset-count" class="muted">0 clips</span>
+            </div>
+            <fieldset id="visual-controls">
+              <label class="import-take secondary"
+                >+ Add demo clips<input
+                  id="import-clips"
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  hidden
+              /></label>
+              <div
+                id="visual-strip"
+                class="visual-strip"
+                aria-label="Section visual timeline"
+              ></div>
+              <div id="visual-cues"></div>
+              <div class="cue-add">
+                <label
+                  >New visual at second<input
+                    id="cue-at"
+                    type="number"
+                    min=".1"
+                    step=".1"
+                    value="5" /></label
+                ><button id="add-visual-cue" class="quiet">+ Add cue</button>
+              </div>
+            </fieldset>
+            <p id="visual-status" class="muted" role="status"></p>
+          </section>
+        </div>
+      </section>
       <div class="finish-bar">
         <div>
           <strong id="finish-title">A complete story, in your own voice.</strong
@@ -235,7 +313,8 @@
         <span
           >Saved in this browser. Download a backup before switching devices or
           clearing browser data.</span
-        ><a href="LICENSING.md" target="_blank" rel="noopener noreferrer">License ↗</a
+        ><a href="LICENSING.md" target="_blank" rel="noopener noreferrer"
+          >License ↗</a
         ><button id="help-open" class="quiet">How it works ↗</button>
       </footer>
     </main>
@@ -296,12 +375,25 @@
             </select></label
           >
           <div id="mask-controls">
-            <label>Cutout quality<select id="mask-quality">
-              <option value="portrait">Portrait · cleaner cutout</option>
-              <option value="fast">Fast · lighter processing</option>
-            </select></label>
-            <label>Chair &amp; edge cleanup<input type="range" id="mask-cleanup" min="0" max="100" step="5" value="60" aria-describedby="cleanup-help" /></label>
-            <p id="cleanup-help" class="muted">Gentle ← → Strong. Reduce if hair or headphones disappear.</p>
+            <label
+              >Cutout quality<select id="mask-quality">
+                <option value="portrait">Portrait · cleaner cutout</option>
+                <option value="fast">Fast · lighter processing</option>
+              </select></label
+            >
+            <label
+              >Chair &amp; edge cleanup<input
+                type="range"
+                id="mask-cleanup"
+                min="0"
+                max="100"
+                step="5"
+                value="60"
+                aria-describedby="cleanup-help"
+            /></label>
+            <p id="cleanup-help" class="muted">
+              Gentle ← → Strong. Reduce if hair or headphones disappear.
+            </p>
           </div>
           <label
             >Corner<select id="position">
@@ -395,20 +487,53 @@
           id="new-name"
           type="text"
           placeholder="My next hackathon demo"
-          maxlength="180" /></label
-      ><label
-        >Your visual video<input
-          id="new-video"
-          type="file"
-          accept="video/*" /></label
-      ><label
-        >Chapter script <span class="muted">optional JSON</span
-        ><input id="new-timeline" type="file" accept=".json,application/json"
+          maxlength="180"
       /></label>
-      <p class="muted">
-        Without a chapter script, start with one chapter. The video’s original
-        sound is replaced by your takes. Your existing projects stay saved.
-      </p>
+      <fieldset class="workflow-choice">
+        <legend>Where would you like to start?</legend>
+        <label
+          ><input type="radio" name="workflow" value="video" checked /><span
+            ><strong>Video first</strong
+            ><small>Narrate an existing visual edit.</small></span
+          ></label
+        >
+        <label
+          ><input type="radio" name="workflow" value="voice" /><span
+            ><strong>Voice first</strong
+            ><small>Tell your story. Add footage after.</small></span
+          ></label
+        >
+      </fieldset>
+      <div id="voice-project-fields" hidden>
+        <label
+          >Your script <span class="muted">optional</span
+          ><textarea
+            id="new-script"
+            rows="7"
+            maxlength="100000"
+            placeholder="Paste a script from ChatGPT, Claude, or your own notes. Separate sections with a blank line."
+          ></textarea>
+        </label>
+        <p class="muted">
+          No countdown pressure. Each take sets its own length. Add # headings
+          to name sections.
+        </p>
+      </div>
+      <div id="video-project-fields">
+        <label
+          >Your visual video<input
+            id="new-video"
+            type="file"
+            accept="video/*" /></label
+        ><label
+          >Chapter script <span class="muted">optional JSON</span
+          ><input id="new-timeline" type="file" accept=".json,application/json"
+        /></label>
+        <p class="muted">
+          Without a chapter script, start with one chapter. The video’s original
+          sound is replaced by your takes. Your existing projects stay saved.
+        </p>
+      </div>
       <div class="button-row">
         <button id="create-project" class="primary">Create project →</button
         ><button id="script-template" class="quiet">
@@ -448,7 +573,7 @@
           type="text"
           maxlength="1000" /></label
       ><button id="save-script" class="primary">Save script →</button>
-      <p class="muted">
+      <p class="muted" id="script-timing-note">
         The chapter timing stays fixed so your voice follows the visual edit.
       </p>
     </dialog>
@@ -457,6 +582,13 @@
         <h2>A small recording ritual.</h2>
         <button class="icon close-dialog" aria-label="Close help">×</button>
       </div>
+      <p class="muted">
+        <strong>Voice first:</strong> choose it under New project, paste your
+        script and record freely. Transcribe a take locally, then add demo clips
+        at spoken moments. Your selected takes set the timing.
+        <strong>Video first:</strong> follow the existing visual edit using the
+        steps below.
+      </p>
       <ol class="help-steps">
         <li>
           <strong>Settle in.</strong> Enable your mic, and camera if you like.
@@ -488,6 +620,6 @@
         cannot enable an unavailable iPhone remotely.
       </p>
     </dialog>
-    <script type="module" src="app.js?v=20260927-portrait"></script>
+    <script type="module" src="app.js?v=20260927-voice"></script>
   </body>
 </html>

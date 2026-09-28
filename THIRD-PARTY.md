@@ -27,3 +27,19 @@ The external model demonstration photo used in local QA comes from Google's
 segmentation documentation. It is a temporary fixture, **not included in the
 studio or Quorum video**. Synthetic microphone/camera inputs and generated test
 tones are also used only in isolated QA browser contexts, never as narration.
+
+## Local transcription (Voice first)
+
+- **Transformers.js 3.8.1**, Apache-2.0: `vendor/speech/TRANSFORMERS-LICENSE.txt`.
+  The complete browser bundle is self-hosted; no CDN import or remote inference.
+- **ONNX Runtime Web**, MIT: `vendor/speech/ONNXRUNTIME-LICENSE.txt`.
+  WASM assets are the version bundled with Transformers.js 3.8.1.
+- **OpenAI Whisper Tiny**, MIT: `vendor/speech/WHISPER-LICENSE.txt`.
+  Quantized ONNX conversion from
+  [Xenova/whisper-tiny](https://huggingface.co/Xenova/whisper-tiny),
+  revision `5332fcc35e32a33b86612b9a57a89be7906102b1`.
+  Artifact hashes and sizes: `vendor/speech/manifest.json`.
+
+The optional Node-only `sharp` transitive dependency is overridden to 0.35.4
+for patched native libraries; it is not shipped to the browser. The studio's
+proprietary license does not replace any third-party license above.

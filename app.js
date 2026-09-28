@@ -10,7 +10,14 @@ import {
   safeName,
   overlayRect,
 } from "./core.js?v=20260911-contributions";
-import { resolveDevice, devicesReady, deviceError, discoverDevices } from "./devices.js?v=20260927-camera";
+import {
+  resolveDevice,
+  devicesReady,
+  deviceError,
+  discoverDevices,
+} from "./devices.js?v=20260927-camera";
+import { isVoice, scriptChapters, reflowVoice } from "./voice.js";
+import { setupVoice } from "./voice-ui.js?v=20260927-voice";
 import * as Store from "./storage.js";
 import {
   inspectMedia,
@@ -21,7 +28,7 @@ import {
   drawPresenter,
   exportFilm,
   audioCache,
-} from "./media.js?v=20260927-portrait";
+} from "./media.js?v=20260927-voice";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.js";
 const $ = (id) => document.getElementById(id),
   base = $("base-video"),
@@ -97,6 +104,45 @@ const locked = () =>
     "rendering",
     "loading",
   ].includes(mode);
+const voice = setupVoice({
+  state: () => ({ project, takes, index, take: selectedTake() }),
+  locked,
+  run,
+  message,
+  stop: stopPlayback,
+  setMode,
+  persist,
+  saveTake: Store.saveTake,
+  seek: seekVideo,
+  play: playChapter,
+  reload: async (p, i) => {
+    await loadProject(p);
+    await selectChapter(i);
+  },
+});
+function chooseTake(chapterIndex, id) {
+  const previous = project.selected[chapterIndex];
+  if (id) project.selected[chapterIndex] = id;
+  else delete project.selected[chapterIndex];
+  try {
+    if (isVoice(project)) reflowVoice(project, takes);
+  } catch (e) {
+    if (previous) project.selected[chapterIndex] = previous;
+    else delete project.selected[chapterIndex];
+    throw e;
+  }
+}
+function syncVoice() {
+  if (!isVoice(project)) return;
+  reflowVoice(project, takes);
+  const c = chapter();
+  $("chapter-range").textContent = `${clock(c.start)} — ${clock(c.end)}`;
+  $("scrub").max = String(c.end - c.start);
+  $("word-count").textContent =
+    `${c.script.trim().split(/\s+/).filter(Boolean).length} words · ${clock(c.end - c.start)} ${selectedTake() ? "recorded" : "estimated"}`;
+  voice.refresh();
+  drawClocks();
+}
 function message(text, error = false) {
   $("notice").textContent = text;
   $("notice").classList.toggle("error", error);
@@ -120,6 +166,8 @@ function setMode(value) {
   for (const id of [
     "project",
     "new-project",
+    "create-project",
+    "restore",
     "backup",
     "settings-open",
     "devices",
@@ -168,8 +216,15 @@ function setMode(value) {
     .querySelectorAll("#chapters button")
     .forEach((b) => (b.disabled = locked()));
   $("take-camera").disabled = locked() || !selectedTake()?.hasVideo;
+  $("speech-controls").disabled = locked();
+  $("visual-controls").disabled = locked();
+  $("add-section").disabled = locked();
+  document
+    .querySelectorAll("#transcript-rows button, #transcript-rows textarea")
+    .forEach((b) => (b.disabled = locked()));
 }
 function persist() {
+  syncVoice();
   project.updatedAt = Date.now();
   const snapshot = structuredClone(project);
   saveQueue = saveQueue
@@ -230,6 +285,7 @@ function refreshProgress() {
         valid = true;
       } catch {}
     b.classList.toggle("ready", valid);
+    b.title = `${project.chapters[i].title} · ${clock(project.chapters[i].start)}–${clock(project.chapters[i].end)}`;
     b.setAttribute(
       "aria-label",
       `Chapter ${i + 1}: ${project.chapters[i].title}${valid ? ", recorded" : ", not ready"}`,
@@ -249,14 +305,28 @@ function drawClocks(elapsed = 0) {
   const small = document.createElement("span");
   small.textContent = full.slice(-2);
   $("elapsed").append(small);
-  $("remaining").textContent = clock(Math.max(0, duration - elapsed));
+  $("remaining").textContent = isVoice(project)
+    ? "Free"
+    : clock(Math.max(0, duration - elapsed));
   $("remaining").style.color =
-    mode === "recording" && duration - elapsed < 5 ? "var(--red)" : "";
+    !isVoice(project) && mode === "recording" && duration - elapsed < 5
+      ? "var(--red)"
+      : "";
   $("film-time").replaceChildren(
-    document.createTextNode(clock(c.start + Math.min(elapsed, duration)) + " "),
+    document.createTextNode(
+      clock(
+        c.start +
+          (isVoice(project) && mode === "recording"
+            ? elapsed
+            : Math.min(elapsed, duration)),
+      ) + " ",
+    ),
   );
   const total = document.createElement("small");
-  total.textContent = "/ " + clock(project.duration);
+  total.textContent =
+    isVoice(project) && mode === "recording"
+      ? "· recording"
+      : "/ " + clock(project.duration);
   $("film-time").append(total);
   $("scrub").value = String(Math.min(elapsed, duration));
   if (mode === "recording" && $("auto-scroll").checked) {
@@ -310,7 +380,8 @@ function applySettings() {
   $("overlay-size").value = s.size;
   $("mirror-camera").checked = s.mirror;
   $("polish").checked = s.polish;
-  $("auto-stop").checked = s.autoStop;
+  $("auto-stop").checked = isVoice(project) ? false : s.autoStop;
+  $("auto-stop").disabled = isVoice(project);
   document.documentElement.style.setProperty("--script-size", s.font + "px");
 }
 function settingsChanged() {
@@ -337,14 +408,22 @@ function settingsChanged() {
   void persist().catch(() => {});
 }
 function syncDeviceControls() {
-  const busy = locked() || Boolean(deviceSetupPromise || deviceDiscoveryPromise);
-  for (const id of ["enable-devices", "refresh-devices", "camera-enabled", "mic-select", "camera-select"])
+  const busy =
+    locked() || Boolean(deviceSetupPromise || deviceDiscoveryPromise);
+  for (const id of [
+    "enable-devices",
+    "refresh-devices",
+    "camera-enabled",
+    "mic-select",
+    "camera-select",
+  ])
     $(id).disabled = busy;
   $("disable-devices").disabled = locked();
 }
 async function refreshDevices() {
   if (!project || !navigator.mediaDevices?.enumerateDevices) return [];
-  const current = project, generation = ++deviceListGeneration;
+  const current = project,
+    generation = ++deviceListGeneration;
   const list = await navigator.mediaDevices.enumerateDevices();
   if (project !== current || generation !== deviceListGeneration) return list;
   let changed = false;
@@ -352,23 +431,40 @@ async function refreshDevices() {
     ["mic-select", "audioinput", "mic", "micLabel"],
     ["camera-select", "videoinput", "cameraId", "cameraLabel"],
   ]) {
-    const select = $(id), s = project.settings;
+    const select = $(id),
+      s = project.settings;
     const choice = resolveDevice(list, kind, s[key], s[labelKey]);
     select.replaceChildren();
-    select.append(new Option(kind === "audioinput" ? "Default microphone" : "Default camera", ""));
-    list.filter(d => d.kind === kind && d.deviceId).forEach((d, i) => {
-      const option = new Option(d.label || `${kind === "audioinput" ? "Microphone" : "Camera"} ${i + 1}`, d.deviceId);
-      option.dataset.label = d.label;
-      select.append(option);
-    });
+    select.append(
+      new Option(
+        kind === "audioinput" ? "Default microphone" : "Default camera",
+        "",
+      ),
+    );
+    list
+      .filter((d) => d.kind === kind && d.deviceId)
+      .forEach((d, i) => {
+        const option = new Option(
+          d.label ||
+            `${kind === "audioinput" ? "Microphone" : "Camera"} ${i + 1}`,
+          d.deviceId,
+        );
+        option.dataset.label = d.label;
+        select.append(option);
+      });
     if (choice.missing) {
-      const option = new Option(`${choice.label || "Saved device"} — reconnect or choose another`, choice.id);
+      const option = new Option(
+        `${choice.label || "Saved device"} — reconnect or choose another`,
+        choice.id,
+      );
       option.dataset.label = choice.label;
       select.append(option);
     }
     select.value = choice.id;
     if (s[key] !== choice.id || (s[labelKey] || "") !== choice.label) {
-      s[key] = choice.id; s[labelKey] = choice.label; changed = true;
+      s[key] = choice.id;
+      s[labelKey] = choice.label;
+      changed = true;
     }
   }
   if (changed) await persist();
@@ -376,10 +472,15 @@ async function refreshDevices() {
 }
 function findDevices() {
   if (locked() || deviceSetupPromise || deviceDiscoveryPromise) return;
-  const generation = deviceGeneration, current = project;
-  $("device-status").textContent = "Finding microphones and cameras… Allow access if asked. Nothing is recorded.";
+  const generation = deviceGeneration,
+    current = project;
+  $("device-status").textContent =
+    "Finding microphones and cameras… Allow access if asked. Nothing is recorded.";
   deviceDiscoveryPromise = (async () => {
-    if (!navigator.mediaDevices?.getUserMedia) throw Error("Device discovery needs HTTPS and a browser with camera support.");
+    if (!navigator.mediaDevices?.getUserMedia)
+      throw Error(
+        "Device discovery needs HTTPS and a browser with camera support.",
+      );
     const result = await discoverDevices(navigator.mediaDevices, {
       active: devices,
       canceled: () => generation !== deviceGeneration || current !== project,
@@ -387,10 +488,18 @@ function findDevices() {
     if (result.canceled) return;
     const list = await refreshDevices();
     if (generation !== deviceGeneration || current !== project) return;
-    const cameras = list.filter(d => d.kind === "videoinput" && d.deviceId).length;
-    const microphones = list.filter(d => d.kind === "audioinput" && d.deviceId).length;
+    const cameras = list.filter(
+      (d) => d.kind === "videoinput" && d.deviceId,
+    ).length;
+    const microphones = list.filter(
+      (d) => d.kind === "audioinput" && d.deviceId,
+    ).length;
     const status = `${cameras} camera${cameras === 1 ? "" : "s"} · ${microphones} microphone${microphones === 1 ? "" : "s"}. Select your devices, then Enable preview.`;
-    const detail = result.errors.map(({kind, error}) => deviceError(error, kind === "video" ? "Camera" : "Microphone")).join(" ");
+    const detail = result.errors
+      .map(({ kind, error }) =>
+        deviceError(error, kind === "video" ? "Camera" : "Microphone"),
+      )
+      .join(" ");
     $("device-status").textContent = detail || status;
     message(detail || status, Boolean(detail));
   })().finally(() => {
@@ -420,16 +529,19 @@ function stopDevices() {
 }
 function enableDevices() {
   if (deviceSetupPromise) return deviceSetupPromise;
-  if (deviceDiscoveryPromise) throw Error("Wait for device discovery to finish, then enable preview.");
-  deviceSetupPromise = enableDevicesNow().catch(error => {
-    stopDevices();
-    const text = deviceError(error);
-    $("device-status").textContent = text;
-    throw Error(text);
-  }).finally(() => {
-    deviceSetupPromise = null;
-    syncDeviceControls();
-  });
+  if (deviceDiscoveryPromise)
+    throw Error("Wait for device discovery to finish, then enable preview.");
+  deviceSetupPromise = enableDevicesNow()
+    .catch((error) => {
+      stopDevices();
+      const text = deviceError(error);
+      $("device-status").textContent = text;
+      throw Error(text);
+    })
+    .finally(() => {
+      deviceSetupPromise = null;
+      syncDeviceControls();
+    });
   syncDeviceControls();
   return deviceSetupPromise;
 }
@@ -450,7 +562,8 @@ async function enableDevicesNow() {
   const generation = deviceGeneration;
   await refreshDevices();
   if (generation !== deviceGeneration) throw Error("Device setup canceled.");
-  const s = { ...project.settings }, config = deviceConfig();
+  const s = { ...project.settings },
+    config = deviceConfig();
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       ...(s.mic ? { deviceId: { exact: s.mic } } : {}),
@@ -485,7 +598,9 @@ async function enableDevicesNow() {
     await camera.play();
   }
   if (generation !== deviceGeneration || !devicesReady(stream, s.camera))
-    throw Error("A device disconnected during setup. Reconnect it and enable preview again.");
+    throw Error(
+      "A device disconnected during setup. Reconnect it and enable preview again.",
+    );
   for (const track of stream.getTracks())
     track.onended = () => {
       devicesConfig = "";
@@ -493,7 +608,8 @@ async function enableDevicesNow() {
         stopRecording(
           "A recording device disconnected. The captured part has been kept.",
         );
-      $("device-status").textContent = "A device disconnected. Reconnect it, then Find devices and Enable preview.";
+      $("device-status").textContent =
+        "A device disconnected. Reconnect it, then Find devices and Enable preview.";
       message(
         "A device disconnected. Reconnect it and enable preview again.",
         true,
@@ -504,7 +620,9 @@ async function enableDevicesNow() {
   $("device-status").textContent = [
     s.camera ? `Camera: ${stream.getVideoTracks()[0]?.label || "ready"}` : "",
     `Microphone: ${stream.getAudioTracks()[0]?.label || "ready"}`,
-  ].filter(Boolean).join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
   await refreshDevices();
   void Store.persistStorage();
   if (s.camera && s.background === "remove") {
@@ -523,10 +641,12 @@ async function enableDevicesNow() {
   }
 }
 function updateMaskStatus() {
-  $("mask-status").textContent = remover.quality === "portrait"
-    ? (remover.backend === "GPU" ? "Portrait cutout · GPU accelerated · on this device."
-      : "Portrait cutout · CPU processing. Choose Fast if preview feels slow.")
-    : "Fast cutout · on this device. Portrait separates chairs more accurately.";
+  $("mask-status").textContent =
+    remover.quality === "portrait"
+      ? remover.backend === "GPU"
+        ? "Portrait cutout · GPU accelerated · on this device."
+        : "Portrait cutout · CPU processing. Choose Fast if preview feels slow."
+      : "Fast cutout · on this device. Portrait separates chairs more accurately.";
 }
 async function selectChapter(i) {
   if (locked()) return;
@@ -549,13 +669,16 @@ async function selectChapter(i) {
       b.setAttribute("aria-current", String(j === index)),
     );
     drawClocks();
-    await seekVideo(base, c.start + Math.min(0.35, (c.end - c.start) / 4));
+    voice.refresh();
+    if (isVoice(project)) await voice.seek(c.start);
+    else await seekVideo(base, c.start + Math.min(0.35, (c.end - c.start) / 4));
     await refreshTakes();
   } finally {
     setMode("idle");
   }
 }
 async function refreshTakes() {
+  syncVoice();
   const local = takes
       .filter((t) => t.chapter === index)
       .sort((a, b) => b.createdAt - a.createdAt),
@@ -628,17 +751,35 @@ async function updateTrim() {
   stopPlayback();
   const take = selectedTake();
   if (!take) return;
+  const values = {
+    trimIn: Number($("trim-in").value),
+    trimOut: Number($("trim-out").value),
+    offset: Number($("take-offset").value),
+    showCamera: $("take-camera").checked,
+  };
+  if (Object.entries(values).every(([key, value]) => take[key] === value))
+    return;
+  const previous = { ...take };
   Object.assign(take, {
     trimIn: Number($("trim-in").value),
     trimOut: Number($("trim-out").value),
     offset: Number($("take-offset").value),
     showCamera: $("take-camera").checked,
   });
+  try {
+    if (isVoice(project)) reflowVoice(project, takes);
+  } catch (e) {
+    Object.assign(take, previous);
+    await refreshTakes();
+    throw e;
+  }
   showFit();
   await Store.saveTake(take);
+  if (isVoice(project)) await persist();
   refreshProgress();
 }
 function stopPlayback() {
+  voice.stop();
   base.pause();
   takeVideo.pause();
   try {
@@ -651,7 +792,7 @@ function stopPlayback() {
   $("play-chapter").setAttribute("aria-label", "Play chapter");
   if (mode === "playing") setMode("idle");
 }
-async function playChapter() {
+async function playChapter(from = 0) {
   if (mode === "playing") {
     stopPlayback();
     return;
@@ -661,7 +802,11 @@ async function playChapter() {
   try {
     const c = chapter(),
       take = selectedTake();
-    await seekVideo(base, c.start);
+    from = clamp(Number(from) || 0, 0, Math.max(0, c.end - c.start - 0.1));
+    if (isVoice(project)) {
+      voice.validate();
+      await voice.seek(c.start + from, true);
+    } else await seekVideo(base, c.start + from);
     audioCtx ??= new AudioContext();
     await audioCtx.resume();
     playTake = null;
@@ -672,7 +817,13 @@ async function playChapter() {
       if (take.hasVideo && take.showCamera !== false) {
         takeVideo.src = urlFor(take);
         takeVideo.load();
-        await seekVideo(takeVideo, plan.trimIn);
+        await seekVideo(
+          takeVideo,
+          Math.min(
+            plan.trimOut - 0.01,
+            plan.trimIn + Math.max(0, from - plan.offset),
+          ),
+        );
         playTake = { take, plan };
       }
     }
@@ -689,15 +840,19 @@ async function playChapter() {
           takes,
         )
       : null;
-    await base.play();
-    playbackAt = c.start;
+    if (!isVoice(project)) await base.play();
+    playbackAt = c.start + from;
     playbackEnd = c.end;
     playbackOrigin = audioCtx.currentTime;
     if (mix) {
       playbackSource = audioCtx.createBufferSource();
       playbackSource.buffer = mix;
       playbackSource.connect(audioCtx.destination);
-      playbackSource.start(playbackOrigin, c.start, c.end - c.start);
+      playbackSource.start(
+        playbackOrigin,
+        c.start + from,
+        c.end - c.start - from,
+      );
     }
     setMode("playing");
     $("play-chapter").textContent = "Ⅱ";
@@ -735,7 +890,7 @@ async function recordChapter() {
     )
       await enableDevices();
     if (token !== countToken) return;
-    await seekVideo(base, c.start);
+    if (!isVoice(project)) await seekVideo(base, c.start);
     const type = recordingMime(devices.getVideoTracks().length > 0);
     if (!type)
       throw Error(
@@ -776,11 +931,13 @@ async function recordChapter() {
             showCamera: meta.hasVideo,
             createdAt: Date.now(),
             trimIn: 0,
-            trimOut: Math.min(duration, c.end - c.start),
+            trimOut: isVoice(project)
+              ? duration
+              : Math.min(duration, c.end - c.start),
             offset: 0,
           };
         takes.push(take);
-        project.selected[chapterIndex] = take.id;
+        chooseTake(chapterIndex, take.id);
         try {
           await Store.saveTake(take);
           await persist();
@@ -818,18 +975,22 @@ async function recordChapter() {
     }
     $("countdown").hidden = true;
     if (!devicesReady(devices, project.settings.camera))
-      throw Error("A recording device disconnected. Reconnect it and enable preview again.");
+      throw Error(
+        "A recording device disconnected. Reconnect it and enable preview again.",
+      );
     recorder.start(1000);
     recordStarted = performance.now();
     setMode("recording");
-    void base.play().catch(() => {});
+    if (!isVoice(project)) void base.play().catch(() => {});
     message("Your voice is recording. A small pause is perfectly fine.");
     recordTimer = setInterval(() => {
       const elapsed = (performance.now() - recordStarted) / 1000;
       drawClocks(elapsed);
-      const limit = project.settings.autoStop
-        ? c.end - c.start
-        : Math.min(1200, (c.end - c.start) * 2 + 15);
+      const limit = isVoice(project)
+        ? Math.max(0.25, 1200 - project.duration + (c.end - c.start))
+        : project.settings.autoStop
+          ? c.end - c.start
+          : Math.min(1200, (c.end - c.start) * 2 + 15);
       if (elapsed >= limit) stopRecording();
       if (base.currentTime >= c.end) base.pause();
     }, 40);
@@ -876,17 +1037,25 @@ async function loadProject(p) {
   blobUrls.clear();
   audioCache.clear();
   if (baseUrl) URL.revokeObjectURL(baseUrl);
-  baseBlob =
-    p.videoBlob ||
-    (await fetch("presets/quorum/visual.mp4?v=20260911-contributions").then(
-      (r) => {
-        if (!r.ok) throw Error("The visual video could not load.");
-        return r.blob();
-      },
-    ));
-  baseUrl = URL.createObjectURL(baseBlob);
-  base.src = baseUrl;
+  voice.reset();
+  baseBlob = isVoice(p)
+    ? null
+    : p.videoBlob ||
+      (await fetch("presets/quorum/visual.mp4?v=20260911-contributions").then(
+        (r) => {
+          if (!r.ok) throw Error("The visual video could not load.");
+          return r.blob();
+        },
+      ));
+  if (baseBlob) {
+    baseUrl = URL.createObjectURL(baseBlob);
+    base.src = baseUrl;
+  } else {
+    baseUrl = null;
+    base.removeAttribute("src");
+  }
   base.load();
+  if (isVoice(p)) reflowVoice(p, takes);
   $("chapters").replaceChildren();
   project.chapters.forEach((c, i) => {
     const b = document.createElement("button");
@@ -909,7 +1078,9 @@ async function loadProject(p) {
   await selectChapter(0);
   refreshProgress();
   message(
-    "Your video is ready. Start with any chapter; your takes stay on this device.",
+    isVoice(p)
+      ? "Voice first. Record at your own pace, then match demo clips to your words."
+      : "Your video is ready. Start with any chapter; your takes stay on this device.",
   );
 }
 async function refreshProjectMenu() {
@@ -930,7 +1101,13 @@ function draw() {
   if (mode !== "rendering") {
     ctx.fillStyle = "#080b0b";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (base.readyState >= 2) {
+    if (isVoice(project)) {
+      const time =
+        mode === "playing"
+          ? playbackAt + audioCtx.currentTime - playbackOrigin
+          : chapter().start + Number($("scrub").value || 0);
+      voice.draw(ctx, canvas.width, canvas.height, time, mode === "playing");
+    } else if (base.readyState >= 2) {
       const scale = Math.min(
           canvas.width / base.videoWidth,
           canvas.height / base.videoHeight,
@@ -977,7 +1154,10 @@ function draw() {
           remover
             .process(cam, project.settings)
             .then((frame) => {
-              if (generation !== segmentGeneration) { frame.close(); return; }
+              if (generation !== segmentGeneration) {
+                frame.close();
+                return;
+              }
               updateMaskStatus();
               liveForeground?.close();
               liveForeground = frame;
@@ -999,10 +1179,14 @@ function draw() {
     }
     if (mode === "playing") {
       const elapsed = audioCtx.currentTime - playbackOrigin;
-      drawClocks(elapsed);
+      drawClocks(playbackAt - chapter().start + elapsed);
       if (playbackAt + elapsed >= playbackEnd) {
         stopPlayback();
-        void seekVideo(base, chapter().start)
+        void (
+          isVoice(project)
+            ? voice.seek(chapter().start)
+            : seekVideo(base, chapter().start)
+        )
           .then(() => drawClocks())
           .catch(() => {});
       }
@@ -1057,6 +1241,7 @@ function checkExport() {
 }
 async function renderFilm() {
   checkExport();
+  if (isVoice(project)) voice.validate();
   stopPlayback();
   setMode("rendering");
   exportAbort = new AbortController();
@@ -1132,158 +1317,279 @@ async function renderFilm() {
   }
 }
 async function backup() {
-  await saveQueue.catch(() => {});
-  const files = {},
-    meta = structuredClone(project);
-  delete meta.videoBlob;
-  const rows = [];
-  for (const take of takes) {
-    const item = { ...take, blobType: take.blob.type };
-    delete item.blob;
-    item.file = `takes/${take.id}.bin`;
-    rows.push(item);
-    files[item.file] = new Uint8Array(await take.blob.arrayBuffer());
-  }
-  if (project.videoBlob) {
-    files["visual.bin"] = new Uint8Array(await project.videoBlob.arrayBuffer());
-    meta.videoFile = "visual.bin";
-  }
-  files["project.json"] = strToU8(
-    JSON.stringify({ schema: 1, project: meta, takes: rows }),
-  );
-  message("Preparing your private backup…");
-  await new Promise((r) => setTimeout(r, 0));
-  const total = Object.values(files).reduce((a, b) => a + b.length, 0);
-  if (total > 512 * 1024 * 1024)
-    throw Error(
-      "This project is too large for a browser ZIP. Download individual original takes instead.",
+  if (locked()) return;
+  stopPlayback();
+  setMode("loading");
+  try {
+    await saveQueue.catch(() => {});
+    const files = {},
+      meta = structuredClone(project);
+    delete meta.videoBlob;
+    if (isVoice(project)) {
+      meta.assets = [];
+      for (const asset of project.assets || []) {
+        const file = `clips/${asset.id}.bin`;
+        files[file] = new Uint8Array(await asset.blob.arrayBuffer());
+        const { blob, ...rest } = asset;
+        meta.assets.push({ ...rest, file, blobType: blob.type });
+      }
+    }
+    const rows = [];
+    for (const take of takes) {
+      const item = { ...take, blobType: take.blob.type };
+      delete item.blob;
+      item.file = `takes/${take.id}.bin`;
+      rows.push(item);
+      files[item.file] = new Uint8Array(await take.blob.arrayBuffer());
+    }
+    if (project.videoBlob) {
+      files["visual.bin"] = new Uint8Array(
+        await project.videoBlob.arrayBuffer(),
+      );
+      meta.videoFile = "visual.bin";
+    }
+    files["project.json"] = strToU8(
+      JSON.stringify({
+        schema: isVoice(project) ? 2 : 1,
+        project: meta,
+        takes: rows,
+      }),
     );
-  download(
-    new Blob([zipSync(files, { level: 0 })], { type: "application/zip" }),
-    safeName(project.title) + "-studio-backup.zip",
-  );
-  unsavedTakes.clear();
-  message(
-    "Backup downloaded. It includes original takes, settings and your chapter script.",
-  );
+    message("Preparing your private backup…");
+    await new Promise((r) => setTimeout(r, 0));
+    const total = Object.values(files).reduce((a, b) => a + b.length, 0);
+    if (total > 512 * 1024 * 1024)
+      throw Error(
+        "This project is too large for a browser ZIP. Download individual original takes instead.",
+      );
+    download(
+      new Blob([zipSync(files, { level: 0 })], { type: "application/zip" }),
+      safeName(project.title) + "-studio-backup.zip",
+    );
+    unsavedTakes.clear();
+    message(
+      "Backup downloaded. It includes original takes, settings and your chapter script.",
+    );
+  } finally {
+    setMode("idle");
+  }
 }
 async function restore(file) {
-  if (!file || file.size > 512 * 1024 * 1024)
-    throw Error("Choose a studio backup smaller than 512 MB.");
-  let inflated = 0;
-  const files = unzipSync(new Uint8Array(await file.arrayBuffer()), {
-    filter: (entry) => {
-      inflated += entry.originalSize;
-      if (inflated > 600 * 1024 * 1024)
-        throw Error("Backup expands beyond the import limit.");
-      return (
-        entry.name === "project.json" ||
-        entry.name === "visual.bin" ||
-        /^takes\/[a-z0-9-]+\.bin$/i.test(entry.name)
-      );
-    },
-  });
-  if (!files["project.json"]) throw Error("This is not a Take Studio backup.");
-  const data = JSON.parse(strFromU8(files["project.json"]));
-  if (
-    data.schema !== 1 ||
-    !Array.isArray(data.takes) ||
-    data.takes.length > 1000
-  )
-    throw Error("Unsupported backup.");
-  const timeline = validateTimeline(data.project, data.project.duration),
-    id = crypto.randomUUID(),
-    p = {
-      ...timeline,
-      id,
-      updatedAt: Date.now(),
-      selected: {},
-      settings: { ...defaults, ...data.project.settings },
-    };
-  if (data.project.videoFile) {
-    if (!files["visual.bin"])
-      throw Error("The backup is missing its visual video.");
-    p.videoBlob = new Blob([files["visual.bin"]]);
-    const info = await inspectMedia(p.videoBlob);
-    if (Math.abs(info.duration - p.duration) > 0.1)
-      throw Error("The backup video does not match its timeline.");
-  } else if (p.duration !== 239)
-    throw Error("The backup is missing its visual video.");
-  const restored = [];
-  for (const original of data.takes) {
+  if (locked()) return;
+  stopPlayback();
+  setMode("loading");
+  try {
+    if (!file || file.size > 512 * 1024 * 1024)
+      throw Error("Choose a studio backup smaller than 512 MB.");
+    let inflated = 0;
+    const files = unzipSync(new Uint8Array(await file.arrayBuffer()), {
+      filter: (entry) => {
+        inflated += entry.originalSize;
+        if (inflated > 600 * 1024 * 1024)
+          throw Error("Backup expands beyond the import limit.");
+        return (
+          entry.name === "project.json" ||
+          entry.name === "visual.bin" ||
+          /^(takes|clips)\/[a-z0-9-]+\.bin$/i.test(entry.name)
+        );
+      },
+    });
+    if (!files["project.json"])
+      throw Error("This is not a Take Studio backup.");
+    const data = JSON.parse(strFromU8(files["project.json"]));
     if (
-      !Number.isInteger(original.chapter) ||
-      original.chapter < 0 ||
-      original.chapter >= p.chapters.length ||
-      !files[original.file]
+      ![1, 2].includes(data.schema) ||
+      !Array.isArray(data.takes) ||
+      data.takes.length > 1000
     )
-      throw Error("A backup take is missing or invalid.");
-    const blob = new Blob([files[original.file]], {
-        type:
-          original.blobType ||
-          (original.hasVideo ? "video/webm" : "audio/webm"),
-      }),
-      info = await inspectMedia(blob);
-    if (!info.hasAudio || info.duration <= 0 || info.duration > 1200)
-      throw Error("A backup take has invalid media.");
-    const t = {
-      ...original,
-      id: crypto.randomUUID(),
-      project: id,
-      blob,
-      duration: info.duration,
-      hasVideo: info.hasVideo,
-    };
-    delete t.file;
-    restored.push(t);
-    if (data.project.selected?.[t.chapter] === original.id)
-      p.selected[t.chapter] = t.id;
+      throw Error("Unsupported backup.");
+    const timeline = validateTimeline(data.project, data.project.duration),
+      id = crypto.randomUUID(),
+      p = {
+        ...timeline,
+        id,
+        updatedAt: Date.now(),
+        selected: {},
+        settings: { ...defaults, ...data.project.settings },
+      };
+    if (data.schema === 2 && data.project.workflow === "voice") {
+      p.workflow = "voice";
+      p.assets = [];
+      if (
+        !Array.isArray(data.project.assets) ||
+        data.project.assets.length > 100
+      )
+        throw Error("Invalid clip library.");
+      for (const asset of data.project.assets) {
+        if (
+          !files[asset.file] ||
+          typeof asset.id !== "string" ||
+          p.assets.some((a) => a.id === asset.id)
+        )
+          throw Error("A backup clip is missing or duplicated.");
+        const blob = new Blob([files[asset.file]], {
+            type: asset.blobType || "video/mp4",
+          }),
+          info = await inspectMedia(blob);
+        if (
+          !info.hasVideo ||
+          !Number.isFinite(info.duration) ||
+          info.duration < 0.1 ||
+          info.duration > 1200
+        )
+          throw Error("Invalid backup clip.");
+        p.assets.push({
+          id: asset.id,
+          name: String(asset.name).slice(0, 120),
+          duration: info.duration,
+          blob,
+        });
+      }
+      p.chapters.forEach((c, i) => {
+        const original = data.project.chapters[i];
+        c.estimate = Number.isFinite(original.estimate)
+          ? original.estimate
+          : c.end - c.start;
+        if (!Array.isArray(original.visuals) || original.visuals.length > 500)
+          throw Error("Invalid visual cue list.");
+        c.visuals = original.visuals.map((v) => ({
+          at: Number(v.at),
+          asset: String(v.asset || ""),
+          source: Number(v.source || 0),
+          hold: v.hold === true,
+        }));
+        if (
+          c.visuals.some(
+            (v) => !Number.isFinite(v.at) || !Number.isFinite(v.source),
+          )
+        )
+          throw Error("Invalid visual cue timing.");
+      });
+    } else if (data.project.videoFile) {
+      if (!files["visual.bin"])
+        throw Error("The backup is missing its visual video.");
+      p.videoBlob = new Blob([files["visual.bin"]]);
+      const info = await inspectMedia(p.videoBlob);
+      if (Math.abs(info.duration - p.duration) > 0.1)
+        throw Error("The backup video does not match its timeline.");
+    } else if (p.duration !== 239)
+      throw Error("The backup is missing its visual video.");
+    const restored = [];
+    for (const original of data.takes) {
+      if (
+        !Number.isInteger(original.chapter) ||
+        original.chapter < 0 ||
+        original.chapter >= p.chapters.length ||
+        !files[original.file]
+      )
+        throw Error("A backup take is missing or invalid.");
+      const blob = new Blob([files[original.file]], {
+          type:
+            original.blobType ||
+            (original.hasVideo ? "video/webm" : "audio/webm"),
+        }),
+        info = await inspectMedia(blob);
+      if (!info.hasAudio || info.duration <= 0 || info.duration > 1200)
+        throw Error("A backup take has invalid media.");
+      const t = {
+        ...original,
+        id: crypto.randomUUID(),
+        project: id,
+        blob,
+        duration: info.duration,
+        hasVideo: info.hasVideo,
+      };
+      delete t.file;
+      restored.push(t);
+      if (data.project.selected?.[t.chapter] === original.id)
+        p.selected[t.chapter] = t.id;
+    }
+    if (isVoice(p)) reflowVoice(p, restored);
+    await Store.saveProject(p);
+    for (const t of restored) await Store.saveTake(t);
+    $("project-dialog").close();
+    await loadProject(p);
+    await refreshProjectMenu();
+    message(
+      "Backup restored as a separate project. Your other projects are unchanged.",
+    );
+  } finally {
+    setMode("idle");
   }
-  await Store.saveProject(p);
-  for (const t of restored) await Store.saveTake(t);
-  $("project-dialog").close();
-  await loadProject(p);
-  await refreshProjectMenu();
-  message(
-    "Backup restored as a separate project. Your other projects are unchanged.",
-  );
 }
 async function newProject() {
-  const file = $("new-video").files[0];
-  if (!file) throw Error("Choose your visual video first.");
-  if (file.size > 512 * 1024 * 1024)
-    throw Error("Choose a video smaller than 512 MB.");
-  const info = await inspectMedia(file);
-  if (!info.hasVideo) throw Error("Choose a video with a visual track.");
-  const raw = $("new-timeline").files[0]
-    ? JSON.parse(await $("new-timeline").files[0].text())
-    : {
-        title: $("new-name").value || file.name,
-        chapters: [
-          {
-            start: 0,
-            end: info.duration,
-            title: "Your story",
-            script: "Add your own words with Edit above the script.",
-            direction: "Take it one sentence at a time.",
-          },
-        ],
+  if (locked()) return;
+  stopPlayback();
+  setMode("loading");
+  try {
+    if (
+      document.querySelector('input[name="workflow"]:checked').value === "voice"
+    ) {
+      const chapters = scriptChapters($("new-script").value),
+        p = {
+          id: crypto.randomUUID(),
+          title: $("new-name").value.trim() || "My voice-first story",
+          workflow: "voice",
+          chapters,
+          duration: chapters.at(-1).end,
+          assets: [],
+          selected: {},
+          settings: { ...defaults, autoStop: false },
+          updatedAt: Date.now(),
+        };
+      await Store.saveProject(p);
+      $("project-dialog").close();
+      await loadProject(p);
+      await refreshProjectMenu();
+      return;
+    }
+    const file = $("new-video").files[0];
+    if (!file) throw Error("Choose your visual video first.");
+    if (file.size > 512 * 1024 * 1024)
+      throw Error("Choose a video smaller than 512 MB.");
+    const info = await inspectMedia(file);
+    if (!info.hasVideo) throw Error("Choose a video with a visual track.");
+    const raw = $("new-timeline").files[0]
+      ? JSON.parse(await $("new-timeline").files[0].text())
+      : {
+          title: $("new-name").value || file.name,
+          chapters: [
+            {
+              start: 0,
+              end: info.duration,
+              title: "Your story",
+              script: "Add your own words with Edit above the script.",
+              direction: "Take it one sentence at a time.",
+            },
+          ],
+        };
+    const timeline = validateTimeline(raw, info.duration),
+      p = {
+        ...timeline,
+        title: $("new-name").value.trim() || timeline.title,
+        id: crypto.randomUUID(),
+        updatedAt: Date.now(),
+        videoBlob: file,
+        settings: { ...defaults },
+        selected: {},
       };
-  const timeline = validateTimeline(raw, info.duration),
-    p = {
-      ...timeline,
-      title: $("new-name").value.trim() || timeline.title,
-      id: crypto.randomUUID(),
-      updatedAt: Date.now(),
-      videoBlob: file,
-      settings: { ...defaults },
-      selected: {},
-    };
-  await Store.saveProject(p);
-  $("project-dialog").close();
-  await loadProject(p);
-  await refreshProjectMenu();
+    await Store.saveProject(p);
+    $("project-dialog").close();
+    await loadProject(p);
+    await refreshProjectMenu();
+  } finally {
+    setMode("idle");
+  }
 }
+for (const radio of document.querySelectorAll('input[name="workflow"]'))
+  radio.onchange = () => {
+    const v =
+      document.querySelector('input[name="workflow"]:checked').value ===
+      "voice";
+    $("voice-project-fields").hidden = !v;
+    $("video-project-fields").hidden = v;
+    $("script-template").hidden = v;
+  };
 // Event bindings stay local: there are no upload, purchase or agent endpoints.
 $("record").onclick = recordChapter;
 $("stop").onclick = () =>
@@ -1296,7 +1602,9 @@ $("scrub").oninput = () => {
   if (locked()) return;
   stopPlayback();
   const n = Number($("scrub").value);
-  base.currentTime = chapter().start + n;
+  if (isVoice(project))
+    void voice.seek(chapter().start + n).catch((e) => message(e.message, true));
+  else base.currentTime = chapter().start + n;
   drawClocks(n);
 };
 for (const id of ["settings-open", "devices"])
@@ -1333,12 +1641,14 @@ for (const id of ["mic-select", "camera-select"])
 $("take-select").onchange = () =>
   run(async () => {
     stopPlayback();
-    project.selected[index] = $("take-select").value;
+    chooseTake(index, $("take-select").value);
     await persist();
     await refreshTakes();
   });
 for (const id of ["trim-in", "trim-out", "take-offset", "take-camera"])
   $(id).onchange = () => run(updateTrim);
+for (const id of ["trim-in", "trim-out", "take-offset"])
+  $(id).onblur = () => run(updateTrim);
 $("download-take").onclick = () => {
   const t = selectedTake();
   if (t)
@@ -1363,47 +1673,53 @@ $("delete-take").onclick = () =>
     const replacement = takes
       .filter((x) => x.chapter === index)
       .sort((a, b) => b.createdAt - a.createdAt)[0];
-    if (replacement) project.selected[index] = replacement.id;
-    else delete project.selected[index];
+    chooseTake(index, replacement?.id);
     await persist();
     await refreshTakes();
   });
 $("import-take").onchange = (e) =>
   run(async () => {
-    const file = e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > 256 * 1024 * 1024)
-      throw Error("Choose a take smaller than 256 MB.");
-    const meta = await inspectMedia(file);
-    if (!meta.hasAudio || meta.duration < 0.1 || meta.duration > 1200)
-      throw Error(
-        "Choose an audio or camera take with readable sound, up to 20 minutes.",
+    if (locked()) return;
+    stopPlayback();
+    setMode("loading");
+    try {
+      const file = e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      if (file.size > 256 * 1024 * 1024)
+        throw Error("Choose a take smaller than 256 MB.");
+      const meta = await inspectMedia(file);
+      if (!meta.hasAudio || meta.duration < 0.1 || meta.duration > 1200)
+        throw Error(
+          "Choose an audio or camera take with readable sound, up to 20 minutes.",
+        );
+      const t = {
+        id: crypto.randomUUID(),
+        project: project.id,
+        chapter: index,
+        blob: file,
+        duration: meta.duration,
+        hasVideo: meta.hasVideo,
+        showCamera: meta.hasVideo,
+        createdAt: Date.now(),
+        trimIn: 0,
+        trimOut: meta.duration,
+        offset: 0,
+        label: file.name.slice(0, 80),
+      };
+      await Store.saveTake(t);
+      takes.push(t);
+      chooseTake(index, t.id);
+      await persist();
+      await refreshTakes();
+      message(
+        meta.duration > chapter().end - chapter().start
+          ? "Take imported. Trim it to fit this chapter before exporting."
+          : "Take imported and saved.",
       );
-    const t = {
-      id: crypto.randomUUID(),
-      project: project.id,
-      chapter: index,
-      blob: file,
-      duration: meta.duration,
-      hasVideo: meta.hasVideo,
-      showCamera: meta.hasVideo,
-      createdAt: Date.now(),
-      trimIn: 0,
-      trimOut: meta.duration,
-      offset: 0,
-      label: file.name.slice(0, 80),
-    };
-    await Store.saveTake(t);
-    takes.push(t);
-    project.selected[index] = t.id;
-    await persist();
-    await refreshTakes();
-    message(
-      meta.duration > chapter().end - chapter().start
-        ? "Take imported. Trim it to fit this chapter before exporting."
-        : "Take imported and saved.",
-    );
+    } finally {
+      setMode("idle");
+    }
   });
 $("preview-all").onclick = () => exportDialog(true);
 $("export-open").onclick = () => exportDialog(false);
@@ -1528,8 +1844,9 @@ document.addEventListener("visibilitychange", () => {
     if (mode === "playing") stopPlayback();
   } else if (!locked()) run(refreshDevices);
 });
-navigator.mediaDevices?.addEventListener?.("devicechange", () =>
-  !locked() && run(refreshDevices),
+navigator.mediaDevices?.addEventListener?.(
+  "devicechange",
+  () => !locked() && run(refreshDevices),
 );
 async function init() {
   setMode("loading");
@@ -1540,7 +1857,9 @@ async function init() {
   let all = await Store.projects();
   let refreshNotice = "";
   if (!all.length) {
-    const response = await fetch("presets/quorum/timeline.json?v=20260911-contributions");
+    const response = await fetch(
+      "presets/quorum/timeline.json?v=20260911-contributions",
+    );
     if (!response.ok) throw Error("The chapter script could not load.");
     const raw = await response.json();
     const p = {
@@ -1554,9 +1873,18 @@ async function init() {
     await Store.saveProject(p);
     all = [p];
   }
-  if (all.some(p => p.id === "quorum-september-2026" && !p.videoBlob && p.presetRevision !== "20260911-contributions")) {
+  if (
+    all.some(
+      (p) =>
+        p.id === "quorum-september-2026" &&
+        !p.videoBlob &&
+        p.presetRevision !== "20260911-contributions",
+    )
+  ) {
     try {
-      const response = await fetch("presets/quorum/update.json?v=20260911-contributions");
+      const response = await fetch(
+        "presets/quorum/update.json?v=20260911-contributions",
+      );
       if (!response.ok) throw Error("Sample update unavailable");
       const update = await response.json();
       for (let i = 0; i < all.length; i++) {
@@ -1564,17 +1892,20 @@ async function init() {
         if (refreshed !== all[i]) {
           await Store.saveProject(refreshed);
           all[i] = refreshed;
-          refreshNotice = "Quorum visuals updated. Review chapters 8 and 13 before recording; saved takes and your own script edits are kept.";
+          refreshNotice =
+            "Quorum visuals updated. Review chapters 8 and 13 before recording; saved takes and your own script edits are kept.";
         }
       }
     } catch {
-      refreshNotice = "Your saved project is available. The sample script update could not load; reload later to retry.";
+      refreshNotice =
+        "Your saved project is available. The sample script update could not load; reload later to retry.";
     }
   }
   await loadProject(
     all.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0],
   );
-  if (refreshNotice && project.id === "quorum-september-2026") message(refreshNotice);
+  if (refreshNotice && project.id === "quorum-september-2026")
+    message(refreshNotice);
   await refreshProjectMenu();
   requestAnimationFrame(draw);
 }

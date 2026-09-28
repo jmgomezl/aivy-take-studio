@@ -100,3 +100,38 @@ camera fixture) and `recorded-backup.zip` (produced by the browser check).
   generates silent media fixtures in browser memory. No photo or video fixture
   is included in Git or uploaded; the harness is excluded from the public build.
   Run the local server and open `/production/check-mask.html` to repeat it.
+
+
+## Voice first — 1.3.0
+
+Validated through Chrome UI using local synthetic media, with no user camera,
+microphone, recordings or production storage modified:
+
+- New-project workflow choice; blank-line script sections and headings; existing
+  sample and custom Video first projects still load separately.
+- Synthetic microphone recording continued to 14.6 seconds past a five-second
+  estimate; Stop retained the complete take and reflowed the timeline.
+- Synthetic camera + microphone recording retained both tracks and prior take.
+  Trimming to three seconds updated the timeline; 720p MP4 export decoded with
+  `readyState=4`, duration 3.072 seconds (AAC padding).
+- Two imported voice sections, title card and timed demo clip cut produced a
+  22-second film; resulting MP4 decoded at 22.08 seconds with audio padding.
+- A 15-second Video first regression project exported through the original path.
+- Self-hosted Whisper Tiny transcribed the public JFK fixture into editable
+  phrases at 0.3, 4.6, 8.2 and 10.1 seconds. Cancellation unlocked the UI and
+  preserved the previous transcript/take. No remote inference request.
+- ZIP backup restored as a separate project with both recordings, transcript,
+  original clip, visual cuts and selected-take mapping preserved.
+- 390 px layout has no horizontal overflow; desktop transcript and clip columns
+  reviewed at 1280 px. Responsive breakpoint checks also cover 320/768 px.
+- 34 unit tests cover reflow, caps, invalid trims, visual ordering, missing clips,
+  explicit last-frame holds, timestamp mapping, plus existing devices/masks.
+- `npm audit`: zero reported vulnerabilities. Build excludes development fixtures.
+
+For authorized manual recording regression, open
+`/production/recording-fixture.html` on a separate local port/origin. Its synthetic
+mic/camera adapter runs only in that development page; neither fixture file is
+included in the release. No real microphone/camera permission is needed.
+
+Transcription is approximate. Review words and visual cue timing. Real iPhone
+availability and background cutout quality remain hardware/lighting dependent.
