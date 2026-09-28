@@ -168,6 +168,9 @@ export function setupVoice(api) {
       b.onclick = () => api.run(() => api.play(slot.start - c.start));
       $("visual-strip").append(b);
     }
+    $("transcript-rows")
+      .querySelectorAll("button,textarea")
+      .forEach((el) => (el.disabled = api.locked()));
     $("voice-timing-note").textContent = t
       ? "Timing follows your selected take. Trimming it updates the whole film."
       : "Record or import a take. The estimated section length will follow your actual voice.";
@@ -221,17 +224,18 @@ export function setupVoice(api) {
       await video.play();
     else video.pause();
   }
-  function draw(ctx, w, h, time, playing) {
+  function draw(ctx, w, h, time, playing, allowSync = true) {
     const { project: p, index } = state();
     const slot = plan.find((s) => time >= s.start && time < s.end);
     drawTitle(ctx, w, h, slot?.title || p.chapters[index].title);
     if (slot?.asset) {
       if (
-        visualKey !== slotKey(slot) ||
-        Math.abs(previewAt - time) > 0.5 ||
-        (playing &&
-          video.paused &&
-          slot.source + time - slot.start < slot.asset.duration - 0.1)
+        allowSync &&
+        (visualKey !== slotKey(slot) ||
+          Math.abs(previewAt - time) > 0.5 ||
+          (playing &&
+            video.paused &&
+            slot.source + time - slot.start < slot.asset.duration - 0.1))
       ) {
         previewAt = time;
         void seek(time, playing).catch((e) => {

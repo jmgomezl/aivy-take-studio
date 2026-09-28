@@ -792,10 +792,10 @@ function stopPlayback() {
   $("play-chapter").setAttribute("aria-label", "Play chapter");
   if (mode === "playing") setMode("idle");
 }
-async function playChapter(from = 0) {
+async function playChapter(from) {
   if (mode === "playing") {
     stopPlayback();
-    return;
+    if (from === undefined) return;
   }
   if (locked()) return;
   setMode("preparing");
@@ -805,7 +805,7 @@ async function playChapter(from = 0) {
     from = clamp(Number(from) || 0, 0, Math.max(0, c.end - c.start - 0.1));
     if (isVoice(project)) {
       voice.validate();
-      await voice.seek(c.start + from, true);
+      await voice.seek(c.start + from);
     } else await seekVideo(base, c.start + from);
     audioCtx ??= new AudioContext();
     await audioCtx.resume();
@@ -840,7 +840,8 @@ async function playChapter(from = 0) {
           takes,
         )
       : null;
-    if (!isVoice(project)) await base.play();
+    if (isVoice(project)) await voice.seek(c.start + from, true);
+    else await base.play();
     playbackAt = c.start + from;
     playbackEnd = c.end;
     playbackOrigin = audioCtx.currentTime;
@@ -1106,7 +1107,14 @@ function draw() {
         mode === "playing"
           ? playbackAt + audioCtx.currentTime - playbackOrigin
           : chapter().start + Number($("scrub").value || 0);
-      voice.draw(ctx, canvas.width, canvas.height, time, mode === "playing");
+      voice.draw(
+        ctx,
+        canvas.width,
+        canvas.height,
+        time,
+        mode === "playing",
+        mode === "playing" || mode === "idle",
+      );
     } else if (base.readyState >= 2) {
       const scale = Math.min(
           canvas.width / base.videoWidth,
