@@ -18,6 +18,7 @@ import {
 } from "./devices.js?v=20260927-camera";
 import { isVoice, scriptChapters, reflowVoice } from "./voice.js";
 import { setupVoice } from "./voice-ui.js?v=20260927-voice";
+import { readScriptFile } from "./script-import.js";
 import * as Store from "./storage.js";
 import {
   inspectMedia,
@@ -1525,6 +1526,77 @@ async function restore(file) {
     setMode("idle");
   }
 }
+let importedVoice = null,
+  importedEdit = null,
+  scriptReadVersion = 0;
+function stageVoiceImport(data) {
+  importedVoice = data;
+  $("new-script").value = data.preview;
+  $("new-name").value = data.title;
+  $("new-script-file-status").textContent =
+    `${data.chapters.length} sections ready · timings follow your voice`;
+}
+function stageEditSection() {
+  const c = importedEdit?.chapters[Number($("imported-script-section").value)];
+  if (!c) return;
+  $("edit-title").value = c.title;
+  $("edit-words").value = c.script;
+  $("edit-direction").value = c.direction;
+}
+for (const target of ["new", "edit"]) {
+  const input = $(`${target}-script-file`);
+  $(`import-${target}-script`).onclick = () => input.click();
+  input.onchange = () =>
+    run(async () => {
+      const file = input.files[0];
+      input.value = "";
+      if (!file || locked()) return;
+      const version = ++scriptReadVersion;
+      const data = await readScriptFile(file);
+      if (
+        version !== scriptReadVersion ||
+        !$(target === "new" ? "project-dialog" : "script-dialog").open
+      )
+        return;
+      document.querySelector("dialog[open] .dialog-message")?.remove();
+      $("notice").textContent = "";
+      $("notice").classList.remove("error");
+      if (target === "new") stageVoiceImport(data);
+      else {
+        importedEdit = data;
+        $("imported-script-section").replaceChildren(
+          ...data.chapters.map(
+            (c, i) => new Option(`${i + 1}. ${c.title}`, String(i)),
+          ),
+        );
+        $("imported-script-sections").hidden = false;
+        $("edit-script-file-status").textContent =
+          `${file.name} · ${data.chapters.length} section${data.chapters.length === 1 ? "" : "s"} · save to apply`;
+        stageEditSection();
+      }
+    });
+}
+for (const id of ["project-dialog", "script-dialog"])
+  $(id).addEventListener("close", () => {
+    scriptReadVersion++;
+  });
+$("imported-script-section").onchange = stageEditSection;
+$("import-all-script").onclick = () => {
+  if (!importedEdit) return;
+  stageVoiceImport(importedEdit);
+  const radio = document.querySelector('input[name="workflow"][value="voice"]');
+  radio.checked = true;
+  radio.onchange();
+  $("script-dialog").close();
+  openDialog("project-dialog");
+};
+$("new-script").oninput = () => {
+  if (importedVoice && $("new-script").value !== importedVoice.preview) {
+    importedVoice = null;
+    $("new-script-file-status").textContent =
+      "Edited script · headings name sections; directions use the default";
+  }
+};
 async function newProject() {
   if (locked()) return;
   stopPlayback();
@@ -1533,7 +1605,10 @@ async function newProject() {
     if (
       document.querySelector('input[name="workflow"]:checked').value === "voice"
     ) {
-      const chapters = scriptChapters($("new-script").value),
+      const chapters =
+          importedVoice?.preview === $("new-script").value
+            ? structuredClone(importedVoice.chapters)
+            : scriptChapters($("new-script").value),
         p = {
           id: crypto.randomUUID(),
           title: $("new-name").value.trim() || "My voice-first story",
@@ -1784,6 +1859,11 @@ $("project").onchange = () =>
     if (p) await loadProject(p);
   });
 $("edit-script").onclick = () => {
+  scriptReadVersion++;
+  importedEdit = null;
+  $("imported-script-sections").hidden = true;
+  $("edit-script-file-status").textContent =
+    "TXT, Markdown or chapter JSON · preview before saving";
   const c = chapter();
   $("edit-title").value = c.title;
   $("edit-words").value = c.script;

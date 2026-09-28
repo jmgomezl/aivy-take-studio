@@ -28,7 +28,7 @@ camera effects, audio polish, preview and export.
 
 ### Voice first
 
-1. Paste your script from ChatGPT, Claude or your own notes. Use `# Headings` to name sections, or **blank lines** to separate a plain-text script. You can start blank and
+1. Paste your script from ChatGPT, Claude or your own notes, or click **Import script file** (TXT, Markdown or chapter JSON). Files are read locally. JSON chapter titles and directions are preserved; its original timestamps are ignored in Voice first. Use `# Headings` to name sections, or **blank lines** to separate a plain-text script. You can start blank and
    add sections later. No chatbot account is connected to the studio.
 2. Record or import each section at your own pace. Press **Stop** when done;
    the full take sets the section length. Switching or trimming takes moves the
@@ -44,6 +44,8 @@ camera effects, audio polish, preview and export.
 5. Review and export. Clips play at **1×** with their audio muted. If footage is
    too short, choose another cut or explicitly enable **Hold last frame**.
    The studio does not invent demo footage or silently loop or speed it up.
+
+**Import into an existing script:** click **Edit → Import script file**, choose a section, then **Save script**. To bring in the entire file, choose **Use all sections in a new project** and review before creating it. Existing takes and projects are preserved. Imports support up to 100 sections, 1 MB files and a 20-minute estimated story.
 
 Visual cues are relative to each section. After a shorter retake or a trim,
 review their timing; invalid cues block video export with a specific explanation.

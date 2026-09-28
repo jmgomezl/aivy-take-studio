@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Take Studio · Aivy</title>
-    <link rel="stylesheet" href="style.css?v=20260927-voice" />
+    <link rel="stylesheet" href="style.css?v=20260927-script-import" />
   </head>
   <body>
     <header class="masthead">
@@ -505,6 +505,18 @@
         >
       </fieldset>
       <div id="voice-project-fields" hidden>
+        <button id="import-new-script" class="secondary" type="button">
+          Import script file ↑
+        </button>
+        <input
+          id="new-script-file"
+          type="file"
+          accept=".txt,.md,.markdown,.json"
+          hidden
+        />
+        <p id="new-script-file-status" class="muted" role="status">
+          TXT, Markdown or chapter JSON · stays on this device
+        </p>
         <label
           >Your script <span class="muted">optional</span
           ><textarea
@@ -554,6 +566,26 @@
         <h2>Words that sound like you</h2>
         <button class="icon close-dialog" aria-label="Close script editor">
           ×
+        </button>
+      </div>
+      <button id="import-edit-script" class="secondary" type="button">
+        Import script file ↑
+      </button>
+      <input
+        id="edit-script-file"
+        type="file"
+        accept=".txt,.md,.markdown,.json"
+        hidden
+      />
+      <p id="edit-script-file-status" class="muted" role="status">
+        TXT, Markdown or chapter JSON · preview before saving
+      </p>
+      <div id="imported-script-sections" hidden>
+        <label
+          >Section to load<select id="imported-script-section"></select
+        ></label>
+        <button id="import-all-script" class="quiet" type="button">
+          Use all sections in a new project →
         </button>
       </div>
       <label
@@ -620,6 +652,6 @@
         cannot enable an unavailable iPhone remotely.
       </p>
     </dialog>
-    <script type="module" src="app.js?v=20260927-voice"></script>
+    <script type="module" src="app.js?v=20260927-script-import"></script>
   </body>
 </html>

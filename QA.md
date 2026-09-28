@@ -135,3 +135,12 @@ included in the release. No real microphone/camera permission is needed.
 
 Transcription is approximate. Review words and visual cue timing. Real iPhone
 availability and background cutout quality remain hardware/lighting dependent.
+
+## Script-file import · 2026-09-27
+
+- 40 automated tests pass, including BOM/CRLF normalization, Markdown grouping, chapter JSON metadata, ignored fixed timing, malformed files and input limits.
+- Chrome local UI: created a two-section Voice first project from JSON; verified titles, spoken text and delivery notes.
+- Loaded Markdown into the script editor, selected its second section and canceled: original chapter remained unchanged.
+- Malformed JSON displayed a readable error without changing the draft.
+- Imported TXT, selected its second section and saved: only the current chapter script changed; the second project chapter remained intact. Existing projects remained listed.
+- UI screenshot capture and further browser checks were interrupted by an intermittent browser connection timeout. No production recording tab was reloaded.
